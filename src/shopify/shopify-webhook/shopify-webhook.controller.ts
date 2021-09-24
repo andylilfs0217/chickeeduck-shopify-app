@@ -21,13 +21,13 @@ export class ShopifyWebhookController {
   @Post('orders/create')
   async onReceiveOrderCreate(@Headers() headers: Headers, @Body() body: any) {
     try {
-      // // Get Hmac header
-      // const hmacHeader = headers['x-shopify-hmac-sha256'];
-      // if (!hmacHeader) throw new UnauthorizedException();
-      // // Validation
-      // const isWebhookValid =
-      //   await this.shopifyWebhookService.verifyShopifyWebhook(body, hmacHeader);
-      // if (!isWebhookValid) throw new UnauthorizedException();
+      // Get Hmac header
+      const hmacHeader = headers['x-shopify-hmac-sha256'];
+      if (!hmacHeader) throw new UnauthorizedException();
+      // Validation
+      const isWebhookValid =
+        await this.shopifyWebhookService.verifyShopifyWebhook(body, hmacHeader);
+      if (!isWebhookValid) throw new UnauthorizedException();
 
       // Testing
       const isTest = headers['x-shopify-test'] === 'true';
@@ -53,12 +53,4 @@ export class ShopifyWebhookController {
       }
     }
   }
-
-  // @Post('server/login')
-  // login(@Body() body: any) {
-  //   return this.shopifyWebhookService.loginChickeeDuckServer(
-  //     body['username'],
-  //     body['password'],
-  //   );
-  // }
 }
