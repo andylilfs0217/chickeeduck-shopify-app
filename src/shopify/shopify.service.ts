@@ -16,14 +16,12 @@ export class ShopifyService {
       const body = {
         webhook: {
           topic: 'orders/create',
-          address: 'https://12345.ngrok.io/',
+          address: `${process.env.SERVER_URL}/shopify-webhook/orders/create`,
           format: 'json',
         },
       };
       return this.httpService
-        .post(PathUtils.getChickeeDuckAdminAPI('webhooks'), body, {
-          headers: { 'X-Shopify-Topic': 'orders/create' },
-        })
+        .post(PathUtils.getChickeeDuckShopifyAdminAPI('webhooks'), body)
         .pipe(map((res) => res.data));
     } catch (error) {
       throw new Error(error);
@@ -37,7 +35,7 @@ export class ShopifyService {
   getAllOrders() {
     try {
       return this.httpService
-        .get(PathUtils.getChickeeDuckAdminAPI('orders'))
+        .get(PathUtils.getChickeeDuckShopifyAdminAPI('orders'))
         .pipe(map((res) => res.data));
     } catch (error) {
       throw new Error(error);
