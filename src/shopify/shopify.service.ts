@@ -1,6 +1,6 @@
 import { HttpService } from '@nestjs/axios';
-import { Injectable } from '@nestjs/common';
-import { map } from 'rxjs';
+import { HttpException, Injectable } from '@nestjs/common';
+import { catchError, map } from 'rxjs';
 import { PathUtils } from 'src/utils/path.utils';
 
 @Injectable()
@@ -9,22 +9,28 @@ export class ShopifyService {
 
   /**
    * Create a webhook to ChickeeDuck Shopify
+   * @param topic A webhook subscription topic
    * @returns Create webhook response
    */
-  createWebhook() {
+  createWebhook(topic: string) {
     try {
       const body = {
         webhook: {
-          topic: 'orders/create',
-          address: `${process.env.SERVER_URL}/shopify-webhook/orders/create`,
+          topic: topic,
+          address: `${process.env.SERVER_URL}/shopify-webhook/${topic}`,
           format: 'json',
         },
       };
       return this.httpService
         .post(PathUtils.getChickeeDuckShopifyAdminAPI('webhooks'), body)
-        .pipe(map((res) => res.data));
+        .pipe(
+          map((res) => res.data),
+          catchError((e) => {
+            throw new HttpException(e.response.data, e.response.status);
+          }),
+        );
     } catch (error) {
-      throw new Error(error);
+      throw error;
     }
   }
 
@@ -36,9 +42,128 @@ export class ShopifyService {
     try {
       return this.httpService
         .get(PathUtils.getChickeeDuckShopifyAdminAPI('orders'))
-        .pipe(map((res) => res.data));
+        .pipe(
+          map((res) => res.data),
+          catchError((e) => {
+            throw new HttpException(e.response.data, e.response.status);
+          }),
+        );
     } catch (error) {
-      throw new Error(error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get the details of a specific webhook
+   * @param webhookId Shopify webhook ID
+   * @returns Details of the webhook
+   */
+  getWebhook(webhookId: string) {
+    try {
+      return this.httpService
+        .get(PathUtils.getChickeeDuckShopifyAdminAPI(`webhooks/${webhookId}`))
+        .pipe(
+          map((res) => res.data),
+          catchError((e) => {
+            throw new HttpException(e.response.data, e.response.status);
+          }),
+        );
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * Get the details of all webhooks after a specific webhook ID.\
+   * Get all webhooks if `sinceId` is null.
+   * @param sinceId A webhook ID
+   * @returns Details of webhooks
+   */
+  getWebhooks(sinceId: string) {
+    try {
+      return this.httpService
+        .get(PathUtils.getChickeeDuckShopifyAdminAPI(`webhooks`), {
+          params: { since_id: sinceId },
+        })
+        .pipe(
+          map((res) => res.data),
+          catchError((e) => {
+            throw new HttpException(e.response.data, e.response.status);
+          }),
+        );
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * Get the number of webhooks in active of a specific webhook topic.\
+   * If `topic` is null, all webhooks will be queried.
+   * @param topic A webhook topic
+   * @returns The number of webhooks
+   */
+  getWebhooksCount(topic: string) {
+    try {
+      return this.httpService
+        .get(PathUtils.getChickeeDuckShopifyAdminAPI(`webhooks/count`), {
+          params: {
+            topic: topic,
+          },
+        })
+        .pipe(
+          map((res) => res.data),
+          catchError((e) => {
+            throw new HttpException(e.response.data, e.response.status);
+          }),
+        );
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * Delete a specific shopify webhook
+   * @param webhookId Shopify webhook ID
+   * @returns Empty object
+   */
+  deleteWebhook(webhookId: string) {
+    try {
+      return this.httpService
+        .delete(
+          PathUtils.getChickeeDuckShopifyAdminAPI(`webhooks/${webhookId}`),
+        )
+        .pipe(
+          map((res) => res.data),
+          catchError((e) => {
+            throw new HttpException(e.response.data, e.response.status);
+          }),
+        );
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * Update Shopify webhook subscription's topic or address URIs
+   * @param webhookId Webhook ID
+   * @param body Webhook details
+   * @returns Updated Webhook details`
+   */
+  modifyWebhook(webhookId: string, body: any) {
+    try {
+      return this.httpService
+        .put(
+          PathUtils.getChickeeDuckShopifyAdminAPI(`webhooks/${webhookId}`),
+          body,
+        )
+        .pipe(
+          map((res) => res.data),
+          catchError((e) => {
+            throw new HttpException(e.response.data, e.response.status);
+          }),
+        );
+    } catch (error) {
+      throw error;
     }
   }
 }

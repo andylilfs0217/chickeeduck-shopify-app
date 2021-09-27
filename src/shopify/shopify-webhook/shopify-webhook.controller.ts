@@ -25,8 +25,10 @@ export class ShopifyWebhookController {
       const hmacHeader = headers['x-shopify-hmac-sha256'];
       if (!hmacHeader) throw new UnauthorizedException();
       // Validation
-      const isWebhookValid =
-        await this.shopifyWebhookService.verifyShopifyWebhook(body, hmacHeader);
+      const isWebhookValid = this.shopifyWebhookService.verifyShopifyWebhook(
+        body,
+        hmacHeader,
+      );
       if (!isWebhookValid) throw new UnauthorizedException();
 
       // Testing
@@ -44,13 +46,7 @@ export class ShopifyWebhookController {
       }
       return true;
     } catch (error) {
-      switch (error) {
-        case UnauthorizedException:
-        case BadRequestException:
-          throw error;
-        default:
-          throw new Error(error.message);
-      }
+      throw error;
     }
   }
 }

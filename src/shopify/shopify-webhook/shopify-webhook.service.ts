@@ -46,7 +46,7 @@ export class ShopifyWebhookService {
       this.logoutChickeeDuckServer(loginID);
       return true;
     } catch (error) {
-      throw new Error(error.message);
+      throw error;
     }
   }
 
@@ -187,7 +187,7 @@ export class ShopifyWebhookService {
         .post(apiUrl, JSON.stringify(body))
         .pipe(map((res) => res.data));
     } catch (error) {
-      throw new Error(error.message);
+      throw error;
     }
   }
 
@@ -208,7 +208,7 @@ export class ShopifyWebhookService {
       };
       return this.httpService.post(apiUrl, body).pipe(map((res) => res.data));
     } catch (error) {
-      throw new Error(error.message);
+      throw error;
     }
   }
 
@@ -224,7 +224,7 @@ export class ShopifyWebhookService {
       };
       return this.httpService.post(apiUrl, body).pipe(map((res) => res.data));
     } catch (error) {
-      throw new Error(error.message);
+      throw error;
     }
   }
 
@@ -243,7 +243,7 @@ export class ShopifyWebhookService {
         .post(chickeeDuckApi, body)
         .pipe(map((res) => res.data));
     } catch (error) {
-      throw new Error(error.message);
+      throw error;
     }
   }
 
@@ -260,7 +260,7 @@ export class ShopifyWebhookService {
         .post(chickeeDuckApi, body)
         .pipe(map((res) => res.data));
     } catch (error) {
-      throw new Error(error.message);
+      throw error;
     }
   }
 }
