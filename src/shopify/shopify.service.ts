@@ -1,5 +1,6 @@
 import { HttpService } from '@nestjs/axios';
 import { HttpException, Injectable } from '@nestjs/common';
+import Shopify from '@shopify/shopify-api';
 import { catchError, map } from 'rxjs';
 import { PathUtils } from 'src/utils/path.utils';
 
@@ -38,7 +39,7 @@ export class ShopifyService {
    * Get all orders on ChickeeDuck Shopify
    * @returns All Shopify orders
    */
-  getAllOrders() {
+  async getAllOrders() {
     try {
       return this.httpService
         .get(PathUtils.getChickeeDuckShopifyAdminAPI('orders'))
@@ -48,6 +49,7 @@ export class ShopifyService {
             throw new HttpException(e.response.data, e.response.status);
           }),
         );
+      // const session = await Shopify.Utils.loadCurrentSession(req, res);
     } catch (error) {
       throw error;
     }

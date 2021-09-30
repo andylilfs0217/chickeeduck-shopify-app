@@ -27,6 +27,7 @@
     "@nestjs/config": "^1.0.1",
     "@nestjs/core": "^8.0.0",
     "@nestjs/platform-express": "^8.0.0",
+    "@shopify/shopify-api": "^1.4.1",
     "crypto-js": "^4.1.1",
     "express": "^4.17.1",
     "moment": "^2.29.1",

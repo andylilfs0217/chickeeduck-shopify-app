@@ -74,6 +74,11 @@ export class ShopifyWebhookService {
    * @param shopifyData Shopify data
    */
   private orderShopifyToChickeeDuck(shopifyData: any) {
+    /**
+     * Get a payment code when entering information
+     * @param company Credit card company
+     * @returns Payment code for ChickeeDuck
+     */
     function getCreditCardCode(company: string): string {
       let code = 'OT';
       switch (company) {
@@ -89,6 +94,12 @@ export class ShopifyWebhookService {
       return code;
     }
 
+    // Information constants
+    const salesmanCode = 'D155';
+    const shCode = 'SW004';
+    const cashier = 'BOSS';
+    const cashierNo = 'SW00403';
+
     const chickeeDuckData = {
       hdr: {
         trx_no: shopifyData['order_no'],
@@ -100,13 +111,13 @@ export class ShopifyWebhookService {
         exch_rate: 1,
         trx_bas_amt: shopifyData['total_price'],
         trx_status: 'T',
-        sh_code: 'SW004',
-        wh_code_from: 'SW004',
+        sh_code: shCode,
+        wh_code_from: shCode,
         wh_code_to: '',
-        salesman_code: 'D155',
+        salesman_code: salesmanCode,
         chg_rate: 1,
-        cashier: 'BOSS',
-        cashi_no: 'SW00403',
+        cashier: cashier,
+        cashi_no: cashierNo,
       },
       dat: [],
       pay: [
@@ -147,8 +158,8 @@ export class ShopifyWebhookService {
             item['price'] * item['quantity'] - item['total_discount'],
           mem_a_dis: 0,
           dis_amt: 0,
-          salesman_code: 'D155',
-          sh_code: 'SW000403',
+          salesman_code: salesmanCode,
+          sh_code: cashierNo,
         };
 
         chickeeDuckData.dat.push(chickeeDuckItem);

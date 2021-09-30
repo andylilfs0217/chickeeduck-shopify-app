@@ -12,6 +12,7 @@ import { ShopifyWebhookService } from './shopify-webhook.service';
 @Controller('shopify-webhook')
 export class ShopifyWebhookController {
   constructor(private readonly shopifyWebhookService: ShopifyWebhookService) {}
+  util = require('util');
   /**
    * Webhook for users created an order on Shopify
    * @param req Request information
@@ -21,6 +22,19 @@ export class ShopifyWebhookController {
   @Post('orders/create')
   async onReceiveOrderCreate(@Headers() headers: Headers, @Body() body: any) {
     try {
+      console.log(
+        this.util.inspect(headers, {
+          showHidden: false,
+          depth: null,
+          colors: true,
+        }),
+        this.util.inspect(body, {
+          showHidden: false,
+          depth: null,
+          colors: true,
+        }),
+      );
+
       // Get Hmac header
       const hmacHeader = headers['x-shopify-hmac-sha256'];
       if (!hmacHeader) throw new UnauthorizedException();
