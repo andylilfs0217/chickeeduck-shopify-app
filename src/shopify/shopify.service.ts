@@ -1,19 +1,35 @@
 import { HttpService } from '@nestjs/axios';
-import { HttpException, Injectable } from '@nestjs/common';
-import Shopify from '@shopify/shopify-api';
-import { catchError, map } from 'rxjs';
-import { PathUtils } from 'src/utils/path.utils';
+import { Injectable } from '@nestjs/common';
+import Shopify, { DataType } from '@shopify/shopify-api';
+import { RestClient } from '@shopify/shopify-api/dist/clients/rest';
 
 @Injectable()
 export class ShopifyService {
-  constructor(private httpService: HttpService) {}
+  client: RestClient;
+  API_KEY: string;
+  PASSWORD: string;
+  SHARED_SECRET: string;
+  API_VERSION: string;
+  HOSTNAME: string;
+  SCOPES: string[];
+  SHOP: string;
+  constructor(private httpService: HttpService) {
+    this.API_KEY = process.env.API_KEY;
+    this.PASSWORD = process.env.PASSWORD;
+    this.SHARED_SECRET = process.env.SHARED_SECRET;
+    this.API_VERSION = process.env.API_VERSION;
+    this.HOSTNAME = process.env.HOSTNAME;
+    this.SCOPES = process.env.SCOPES.split(',');
+    this.SHOP = process.env.SHOP;
+    this.client = new Shopify.Clients.Rest(this.HOSTNAME, this.PASSWORD);
+  }
 
   /**
    * Create a webhook to ChickeeDuck Shopify
    * @param topic A webhook subscription topic
    * @returns Create webhook response
    */
-  createWebhook(topic: string) {
+  async createWebhook(topic: string) {
     try {
       const body = {
         webhook: {
@@ -22,14 +38,12 @@ export class ShopifyService {
           format: 'json',
         },
       };
-      return this.httpService
-        .post(PathUtils.getChickeeDuckShopifyAdminAPI('webhooks'), body)
-        .pipe(
-          map((res) => res.data),
-          catchError((e) => {
-            throw new HttpException(e.response.data, e.response.status);
-          }),
-        );
+      const data = await this.client.post({
+        path: `webhooks`,
+        data: body,
+        type: DataType.JSON,
+      });
+      return data.body;
     } catch (error) {
       throw error;
     }
@@ -41,15 +55,13 @@ export class ShopifyService {
    */
   async getAllOrders() {
     try {
-      return this.httpService
-        .get(PathUtils.getChickeeDuckShopifyAdminAPI('orders'))
-        .pipe(
-          map((res) => res.data),
-          catchError((e) => {
-            throw new HttpException(e.response.data, e.response.status);
-          }),
-        );
-      // const session = await Shopify.Utils.loadCurrentSession(req, res);
+      const data = await this.client.get({
+        path: 'orders',
+        query: {
+          api_version: this.API_VERSION,
+        },
+      });
+      return data.body;
     } catch (error) {
       throw error;
     }
@@ -60,16 +72,10 @@ export class ShopifyService {
    * @param webhookId Shopify webhook ID
    * @returns Details of the webhook
    */
-  getWebhook(webhookId: string) {
+  async getWebhook(webhookId: string) {
     try {
-      return this.httpService
-        .get(PathUtils.getChickeeDuckShopifyAdminAPI(`webhooks/${webhookId}`))
-        .pipe(
-          map((res) => res.data),
-          catchError((e) => {
-            throw new HttpException(e.response.data, e.response.status);
-          }),
-        );
+      const data = await this.client.get({ path: `webhooks/${webhookId}` });
+      return data.body;
     } catch (error) {
       throw error;
     }
@@ -81,18 +87,13 @@ export class ShopifyService {
    * @param sinceId A webhook ID
    * @returns Details of webhooks
    */
-  getWebhooks(sinceId: string) {
+  async getWebhooks(sinceId: string) {
     try {
-      return this.httpService
-        .get(PathUtils.getChickeeDuckShopifyAdminAPI(`webhooks`), {
-          params: { since_id: sinceId },
-        })
-        .pipe(
-          map((res) => res.data),
-          catchError((e) => {
-            throw new HttpException(e.response.data, e.response.status);
-          }),
-        );
+      const data = await this.client.get({
+        path: `webhooks`,
+        query: { since_id: sinceId },
+      });
+      return data.body;
     } catch (error) {
       throw error;
     }
@@ -104,20 +105,13 @@ export class ShopifyService {
    * @param topic A webhook topic
    * @returns The number of webhooks
    */
-  getWebhooksCount(topic: string) {
+  async getWebhooksCount(topic: string) {
     try {
-      return this.httpService
-        .get(PathUtils.getChickeeDuckShopifyAdminAPI(`webhooks/count`), {
-          params: {
-            topic: topic,
-          },
-        })
-        .pipe(
-          map((res) => res.data),
-          catchError((e) => {
-            throw new HttpException(e.response.data, e.response.status);
-          }),
-        );
+      const data = await this.client.get({
+        path: `webhooks/count`,
+        query: { topic: topic },
+      });
+      return data.body;
     } catch (error) {
       throw error;
     }
@@ -128,18 +122,10 @@ export class ShopifyService {
    * @param webhookId Shopify webhook ID
    * @returns Empty object
    */
-  deleteWebhook(webhookId: string) {
+  async deleteWebhook(webhookId: string) {
     try {
-      return this.httpService
-        .delete(
-          PathUtils.getChickeeDuckShopifyAdminAPI(`webhooks/${webhookId}`),
-        )
-        .pipe(
-          map((res) => res.data),
-          catchError((e) => {
-            throw new HttpException(e.response.data, e.response.status);
-          }),
-        );
+      const data = await this.client.delete({ path: `webhooks/${webhookId}` });
+      return data.body;
     } catch (error) {
       throw error;
     }
@@ -151,19 +137,14 @@ export class ShopifyService {
    * @param body Webhook details
    * @returns Updated Webhook details`
    */
-  modifyWebhook(webhookId: string, body: any) {
+  async modifyWebhook(webhookId: string, body: any) {
     try {
-      return this.httpService
-        .put(
-          PathUtils.getChickeeDuckShopifyAdminAPI(`webhooks/${webhookId}`),
-          body,
-        )
-        .pipe(
-          map((res) => res.data),
-          catchError((e) => {
-            throw new HttpException(e.response.data, e.response.status);
-          }),
-        );
+      const data = await this.client.put({
+        path: `webhooks/${webhookId}`,
+        data: body,
+        type: DataType.JSON,
+      });
+      return data.body;
     } catch (error) {
       throw error;
     }

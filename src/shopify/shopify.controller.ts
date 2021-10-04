@@ -8,11 +8,7 @@ import {
   Post,
   Put,
   Query,
-  Req,
-  Res,
 } from '@nestjs/common';
-import Shopify, { ApiVersion } from '@shopify/shopify-api';
-import { IncomingMessage, ServerResponse } from 'http';
 import { ShopifyService } from './shopify.service';
 
 @Controller('shopify')
@@ -105,7 +101,7 @@ export class ShopifyController {
    * @returns Empty object
    */
   @Put('webhooks/:id')
-  modifyWebhook(@Param('id') webhookId: string, @Body() body: any) {
+  modifyWebhook(@Param('id') webhookId: string, @Body() body: Body) {
     try {
       return this.shopifyService.modifyWebhook(webhookId, body);
     } catch (error) {
@@ -120,28 +116,9 @@ export class ShopifyController {
    * @returns All Shopify orders
    */
   @Get('orders')
-  async getAllOrders(@Req() req: IncomingMessage, @Res() res: ServerResponse) {
+  async getAllOrders() {
     try {
-      const { API_KEY, PASSWORD, HOSTNAME, SCOPES } = process.env;
-      Shopify.Context.initialize({
-        API_KEY,
-        API_SECRET_KEY: PASSWORD,
-        SCOPES: [SCOPES],
-        HOST_NAME: HOSTNAME,
-        IS_EMBEDDED_APP: false,
-        IS_PRIVATE_APP: true,
-        API_VERSION: ApiVersion.July21,
-      });
-      const session = await Shopify.Utils.loadCurrentSession(req, res);
-      const client = new Shopify.Clients.Rest(
-        session.shop,
-        session.accessToken ?? '',
-      );
-      const products = await client.get({
-        path: 'products',
-      });
-      return products;
-      // return this.shopifyService.getAllOrders();
+      return this.shopifyService.getAllOrders();
     } catch (error) {
       throw error;
     }

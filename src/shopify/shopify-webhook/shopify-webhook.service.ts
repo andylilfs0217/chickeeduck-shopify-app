@@ -1,6 +1,5 @@
 import { HttpService } from '@nestjs/axios';
 import { Injectable } from '@nestjs/common';
-import * as CryptoJs from 'crypto-js';
 import { map } from 'rxjs';
 import { PathUtils } from 'src/utils/path.utils';
 
@@ -48,23 +47,6 @@ export class ShopifyWebhookService {
     } catch (error) {
       throw error;
     }
-  }
-
-  /**
-   * Verify Shopify webhook request
-   * @param hmacHeader A SHA256 string received along with a webhook request
-   */
-  verifyShopifyWebhook(data: any, hmacHeader: string) {
-    // Encode incoming data
-    const encodedData = CryptoJs.enc.Utf8.parse(data);
-    const digest = CryptoJs.HmacSHA256(encodedData, process.env.SHARED_SECRET);
-    const stringDigest = CryptoJs.enc.Base64.stringify(digest);
-    const encodedHmac = CryptoJs.enc.Base64.parse(stringDigest);
-    const encodedStringHmac = CryptoJs.enc.Hex.stringify(encodedHmac);
-
-    // Compare data digest and Hmac header
-    const result = hmacHeader === encodedStringHmac;
-    return result;
   }
 
   // ---------- Private functions ----------

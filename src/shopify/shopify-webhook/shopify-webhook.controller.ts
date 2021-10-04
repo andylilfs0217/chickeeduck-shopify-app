@@ -3,13 +3,14 @@ import {
   Body,
   Controller,
   Headers,
-  HttpException,
   Post,
-  UnauthorizedException,
+  UseInterceptors,
 } from '@nestjs/common';
+import { ShopifyInterceptor } from 'src/interceptors/shopify.interceptor';
 import { ShopifyWebhookService } from './shopify-webhook.service';
 
 @Controller('shopify-webhook')
+@UseInterceptors(ShopifyInterceptor)
 export class ShopifyWebhookController {
   constructor(private readonly shopifyWebhookService: ShopifyWebhookService) {}
   util = require('util');
@@ -22,36 +23,11 @@ export class ShopifyWebhookController {
   @Post('orders/create')
   async onReceiveOrderCreate(@Headers() headers: Headers, @Body() body: any) {
     try {
-      console.log(
-        this.util.inspect(headers, {
-          showHidden: false,
-          depth: null,
-          colors: true,
-        }),
-        this.util.inspect(body, {
-          showHidden: false,
-          depth: null,
-          colors: true,
-        }),
-      );
-
-      // Get Hmac header
-      const hmacHeader = headers['x-shopify-hmac-sha256'];
-      if (!hmacHeader) throw new UnauthorizedException();
-      // Validation
-      const isWebhookValid = this.shopifyWebhookService.verifyShopifyWebhook(
-        body,
-        hmacHeader,
-      );
-      if (!isWebhookValid) throw new UnauthorizedException();
-
-      // Testing
-      const isTest = headers['x-shopify-test'] === 'true';
-
       // Check Shopify version
       const webhookVersion = headers['x-shopify-api-version'];
       switch (webhookVersion) {
         case process.env.API_VERSION:
+        case '2021-10':
         case '2021-07':
           this.shopifyWebhookService.updateChickeeDuckInventory(body);
           break;
