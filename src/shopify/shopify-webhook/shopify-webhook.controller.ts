@@ -13,7 +13,6 @@ import { ShopifyWebhookService } from './shopify-webhook.service';
 @UseInterceptors(ShopifyInterceptor)
 export class ShopifyWebhookController {
   constructor(private readonly shopifyWebhookService: ShopifyWebhookService) {}
-  util = require('util');
   /**
    * Webhook for users created an order on Shopify
    * @param req Request information
@@ -23,13 +22,16 @@ export class ShopifyWebhookController {
   @Post('orders/create')
   async onReceiveOrderCreate(@Headers() headers: Headers, @Body() body: any) {
     try {
+      // Is testing
+      const isTest = headers['x-shopify-test'] === 'true';
       // Check Shopify version
       const webhookVersion = headers['x-shopify-api-version'];
       switch (webhookVersion) {
         case process.env.API_VERSION:
         case '2021-10':
         case '2021-07':
-          this.shopifyWebhookService.updateChickeeDuckInventory(body);
+          if (!isTest)
+            this.shopifyWebhookService.updateChickeeDuckInventory(body);
           break;
         default:
           throw new BadRequestException('Unsupported Shopify API version');

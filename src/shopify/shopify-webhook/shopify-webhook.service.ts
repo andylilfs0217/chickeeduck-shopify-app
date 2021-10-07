@@ -1,11 +1,17 @@
 import { HttpService } from '@nestjs/axios';
 import { Injectable } from '@nestjs/common';
-import { map } from 'rxjs';
+import { lastValueFrom, map } from 'rxjs';
 import { PathUtils } from 'src/utils/path.utils';
 
 @Injectable()
 export class ShopifyWebhookService {
   constructor(private httpService: HttpService) {}
+
+  // Information constants
+  salesmanCode = 'D155';
+  shCode = 'SW004';
+  cashier = 'BOSS';
+  cashierNo = 'SW00403';
 
   /**
    * Update ChickeeDuck inventory in ChickeeDuck server
@@ -15,34 +21,42 @@ export class ShopifyWebhookService {
   async updateChickeeDuckInventory(data: any) {
     try {
       // Login to ChickeeDuck server
-      const loginRes = this.loginChickeeDuckServer(
-        process.env.CHICKEEDUCK_LOGIN_USERNAME,
-        process.env.CHICKEEDUCK_LOGIN_PASSWORD,
+      const loginRes = await lastValueFrom(
+        this.loginChickeeDuckServer(
+          process.env.CHICKEEDUCK_LOGIN_USERNAME,
+          process.env.CHICKEEDUCK_LOGIN_PASSWORD,
+        ),
       );
       let loginID: string;
       if (loginRes['Data'] === true)
         loginID = loginRes['WarningMsg'][0] as string;
 
       // Lock Product
-      const lockProcRes = this.lockProc(
-        loginID,
-        process.env.CHICKEEDUCK_LOGIN_USERNAME,
-        process.env.CHICKEEDUCK_LOGIN_PASSWORD,
+      const lockProcRes = await lastValueFrom(
+        this.lockProc(
+          loginID,
+          process.env.CHICKEEDUCK_USER_ID,
+          process.env.CHICKEEDUCK_USER_PASSWORD,
+        ),
       );
       const procID = lockProcRes['Data'];
 
       // Generate order for ChickeeDuck server from [data]
-      const chickeeduckOrder = this.orderShopifyToChickeeDuck(data);
+      const chickeeduckOrder = JSON.stringify(
+        this.orderShopifyToChickeeDuck(data),
+      );
 
       // Create order on ChickeeDuck server
       const target = 'SAL';
-      this.updateData(loginID, procID, target, chickeeduckOrder);
+      const updateData = await lastValueFrom(
+        this.updateData(loginID, procID, target, chickeeduckOrder),
+      );
 
       // Unlock Product
-      this.unlockProc(loginID, procID);
+      const unlock = await lastValueFrom(this.unlockProc(loginID, procID));
 
       // Logout from ChickeeDuck server
-      this.logoutChickeeDuckServer(loginID);
+      const logout = await lastValueFrom(this.logoutChickeeDuckServer(loginID));
       return true;
     } catch (error) {
       throw error;
@@ -76,12 +90,6 @@ export class ShopifyWebhookService {
       return code;
     }
 
-    // Information constants
-    const salesmanCode = 'D155';
-    const shCode = 'SW004';
-    const cashier = 'BOSS';
-    const cashierNo = 'SW00403';
-
     const chickeeDuckData = {
       hdr: {
         trx_no: shopifyData['order_no'],
@@ -93,13 +101,13 @@ export class ShopifyWebhookService {
         exch_rate: 1,
         trx_bas_amt: shopifyData['total_price'],
         trx_status: 'T',
-        sh_code: shCode,
-        wh_code_from: shCode,
+        sh_code: this.shCode,
+        wh_code_from: this.shCode,
         wh_code_to: '',
-        salesman_code: salesmanCode,
+        salesman_code: this.salesmanCode,
         chg_rate: 1,
-        cashier: cashier,
-        cashi_no: cashierNo,
+        cashier: this.cashier,
+        cashi_no: this.cashierNo,
       },
       dat: [],
       pay: [
@@ -140,8 +148,8 @@ export class ShopifyWebhookService {
             item['price'] * item['quantity'] - item['total_discount'],
           mem_a_dis: 0,
           dis_amt: 0,
-          salesman_code: salesmanCode,
-          sh_code: cashierNo,
+          salesman_code: this.salesmanCode,
+          sh_code: this.cashierNo,
         };
 
         chickeeDuckData.dat.push(chickeeDuckItem);
@@ -198,6 +206,9 @@ export class ShopifyWebhookService {
         userID: username,
         userPWD: password,
         isBatch: 'Y',
+        machineID: '',
+        shopCode: this.shCode,
+        languageID: '',
       };
       return this.httpService.post(apiUrl, body).pipe(map((res) => res.data));
     } catch (error) {

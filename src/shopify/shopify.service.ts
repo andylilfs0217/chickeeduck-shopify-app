@@ -6,22 +6,13 @@ import { RestClient } from '@shopify/shopify-api/dist/clients/rest';
 @Injectable()
 export class ShopifyService {
   client: RestClient;
-  API_KEY: string;
-  PASSWORD: string;
-  SHARED_SECRET: string;
   API_VERSION: string;
-  HOSTNAME: string;
-  SCOPES: string[];
-  SHOP: string;
   constructor(private httpService: HttpService) {
-    this.API_KEY = process.env.API_KEY;
-    this.PASSWORD = process.env.PASSWORD;
-    this.SHARED_SECRET = process.env.SHARED_SECRET;
     this.API_VERSION = process.env.API_VERSION;
-    this.HOSTNAME = process.env.HOSTNAME;
-    this.SCOPES = process.env.SCOPES.split(',');
-    this.SHOP = process.env.SHOP;
-    this.client = new Shopify.Clients.Rest(this.HOSTNAME, this.PASSWORD);
+    this.client = new Shopify.Clients.Rest(
+      process.env.HOSTNAME,
+      process.env.PASSWORD,
+    );
   }
 
   /**
