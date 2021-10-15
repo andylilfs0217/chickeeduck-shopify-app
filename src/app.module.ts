@@ -11,7 +11,10 @@ import { RawBodyMiddleware } from './middleware/raw-body.middleware';
 import { RawBodyParserMiddleware } from './middleware/raw-body-parser.middleware';
 import { JsonBodyMiddleware } from './middleware/json-body.middleware';
 import { AppLoggerMiddleware } from './middleware/app-logger.middleware';
-import { WinstonModule } from 'nest-winston';
+import {
+  utilities as nestWinstonModuleUtilities,
+  WinstonModule,
+} from 'nest-winston';
 import * as winston from 'winston';
 import { SchedulerController } from './scheduler/scheduler.controller';
 import { SchedulerService } from './scheduler/scheduler.service';
@@ -40,17 +43,38 @@ import { ScheduleModule } from '@nestjs/schedule';
         new winston.transports.File({
           filename: 'logs/error.log',
           level: 'error',
-          format: winston.format.json(),
+          format: winston.format.combine(
+            winston.format.timestamp(),
+            winston.format.ms(),
+            winston.format.errors(),
+          ),
         }),
-        new winston.transports.Http({
+        new winston.transports.File({
+          filename: 'logs/warn.log',
           level: 'warn',
-          format: winston.format.json(),
+          format: winston.format.combine(
+            winston.format.timestamp(),
+            winston.format.ms(),
+            winston.format.json(),
+          ),
+        }),
+        new winston.transports.File({
+          filename: 'logs/info.log',
+          level: 'info',
+          format: winston.format.combine(
+            winston.format.timestamp(),
+            winston.format.ms(),
+            winston.format.json(),
+          ),
         }),
         new winston.transports.Console({
           level: 'info',
           format: winston.format.combine(
-            winston.format.colorize(),
-            winston.format.simple(),
+            winston.format.timestamp(),
+            winston.format.ms(),
+            nestWinstonModuleUtilities.format.nestLike(process.env.APP_NAME, {
+              prettyPrint: true,
+            }),
           ),
         }),
       ],

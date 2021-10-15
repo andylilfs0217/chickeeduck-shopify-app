@@ -1,4 +1,3 @@
-import { HttpService } from '@nestjs/axios';
 import { Injectable } from '@nestjs/common';
 import Shopify, { DataType } from '@shopify/shopify-api';
 import { RestClient } from '@shopify/shopify-api/dist/clients/rest';
@@ -7,7 +6,7 @@ import { RestClient } from '@shopify/shopify-api/dist/clients/rest';
 export class ShopifyService {
   client: RestClient;
   API_VERSION: string;
-  constructor(private httpService: HttpService) {
+  constructor() {
     this.API_VERSION = process.env.API_VERSION;
     this.client = new Shopify.Clients.Rest(
       process.env.HOSTNAME,

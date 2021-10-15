@@ -42,14 +42,13 @@ export class ShopifyWebhookService {
       const procID = lockProcRes['Data'];
 
       // Generate order for ChickeeDuck server from [data]
-      const chickeeduckOrder = JSON.stringify(
-        this.orderShopifyToChickeeDuck(data),
-      );
+      const chickeeduckOrderJson = this.orderShopifyToChickeeDuck(data);
+      const chickeeduckOrderString = JSON.stringify(chickeeduckOrderJson);
 
       // Create order on ChickeeDuck server
       const target = 'SAL';
       const updateData = await lastValueFrom(
-        this.updateData(loginID, procID, target, chickeeduckOrder),
+        this.updateData(loginID, procID, target, chickeeduckOrderString),
       );
 
       // Unlock Product
@@ -175,7 +174,7 @@ export class ShopifyWebhookService {
         funcNo: 'import_data',
         funcType: 1,
         funcTableType: 4,
-        pmtID: 1,
+        pmtID: -1,
         stringParms: [
           { Name: 'window__action', Value: 'update__window_data' },
           { Name: 'window__action_target', Value: target },
@@ -206,9 +205,9 @@ export class ShopifyWebhookService {
         userID: username,
         userPWD: password,
         isBatch: 'Y',
-        machineID: '',
-        shopCode: this.shCode,
-        languageID: '',
+        // machineID: '',
+        // shopCode: this.shCode,
+        // languageID: '',
       };
       return this.httpService.post(apiUrl, body).pipe(map((res) => res.data));
     } catch (error) {
@@ -242,6 +241,7 @@ export class ShopifyWebhookService {
       const body = {
         UserName: username,
         Password: password,
+        ProcessType: 1,
       };
       return this.httpService
         .post(chickeeDuckApi, body)
