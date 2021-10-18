@@ -2,6 +2,7 @@ import { HttpService } from '@nestjs/axios';
 import { Injectable } from '@nestjs/common';
 import { lastValueFrom, map } from 'rxjs';
 import { PathUtils } from 'src/utils/path.utils';
+import * as moment from 'moment';
 
 @Injectable()
 export class ShopifyWebhookService {
@@ -12,6 +13,7 @@ export class ShopifyWebhookService {
   shCode = 'SW004';
   cashier = 'BOSS';
   cashierNo = 'SW00403';
+  orderNoPrefix = 'SW04W';
 
   /**
    * Update ChickeeDuck inventory in ChickeeDuck server
@@ -47,15 +49,19 @@ export class ShopifyWebhookService {
 
       // Create order on ChickeeDuck server
       const target = 'SAL';
-      const updateData = await lastValueFrom(
-        this.updateData(loginID, procID, target, chickeeduckOrderString),
-      );
+      // const updateData = await lastValueFrom(
+      this.updateData(loginID, procID, target, chickeeduckOrderString);
+      // );
 
       // Unlock Product
-      const unlock = await lastValueFrom(this.unlockProc(loginID, procID));
+      // const unlock = await lastValueFrom(
+      this.unlockProc(loginID, procID);
+      // );
 
       // Logout from ChickeeDuck server
-      const logout = await lastValueFrom(this.logoutChickeeDuckServer(loginID));
+      // const logout = await lastValueFrom(
+      this.logoutChickeeDuckServer(loginID);
+      // );
       return true;
     } catch (error) {
       throw error;
@@ -83,6 +89,9 @@ export class ShopifyWebhookService {
         case 'MasterCard':
           code = 'MC';
           break;
+        case 'paypal':
+          code = 'PL';
+          break;
         default:
           break;
       }
@@ -91,14 +100,16 @@ export class ShopifyWebhookService {
 
     const chickeeDuckData = {
       hdr: {
-        trx_no: shopifyData['order_no'],
+        trx_no: this.createTrxNo(shopifyData['order_number']),
         trx_type: 'SAL',
         doc_type: 'SA1',
-        trx_date: shopifyData['created_at'],
+        trx_date: moment(shopifyData['created_at']).format(
+          'YYYY-MM-DD  HH:mm:ss',
+        ),
         user_member: shopifyData['customer']['email'],
         curr_code: shopifyData['currency'],
         exch_rate: 1,
-        trx_bas_amt: shopifyData['total_price'],
+        trx_bas_amt: parseFloat(shopifyData['total_price']),
         trx_status: 'T',
         sh_code: this.shCode,
         wh_code_from: this.shCode,
@@ -111,15 +122,17 @@ export class ShopifyWebhookService {
       dat: [],
       pay: [
         {
-          trx_no: shopifyData['order_no'],
+          trx_no: this.createTrxNo(shopifyData['order_number']),
           line_no: 1, //idx
+          // shopifyData['payment_gateway_names'][0] = 'paypal'
+          // shopifyData['gateway'] = 'paypal'
           pay_code: !!shopifyData['payment_details']
             ? getCreditCardCode(
                 shopifyData['payment_details']['credit_card_company'],
               )
-            : null,
-          pay_acc_amt: shopifyData['total_price'],
-          pay_bas_amt: shopifyData['total_price'],
+            : getCreditCardCode(shopifyData['gateway']),
+          pay_acc_amt: parseFloat(shopifyData['total_price']),
+          pay_bas_amt: parseFloat(shopifyData['total_price']),
           curr_code: shopifyData['currency'],
           exch_rate: 1,
           is_cash: 'H',
@@ -133,12 +146,12 @@ export class ShopifyWebhookService {
         const item = shopifyData['line_items'][idx];
 
         const chickeeDuckItem = {
-          trx_no: shopifyData['order_no'],
-          line_no: idx + 1, // Index starts with 1
+          trx_no: this.createTrxNo(shopifyData['order_number']),
+          line_no: parseInt(idx) + 1, // Index starts with 1
           item_code: item['sku'],
           item_name: item['name'],
           trx_type: 'S',
-          unit_price: item['price'],
+          unit_price: parseFloat(item['price']),
           item_qty: item['quantity'],
           item_discount:
             item['total_discount'] / (item['price'] * item['quantity']), // percentage off
@@ -205,9 +218,6 @@ export class ShopifyWebhookService {
         userID: username,
         userPWD: password,
         isBatch: 'Y',
-        // machineID: '',
-        // shopCode: this.shCode,
-        // languageID: '',
       };
       return this.httpService.post(apiUrl, body).pipe(map((res) => res.data));
     } catch (error) {
@@ -266,5 +276,16 @@ export class ShopifyWebhookService {
     } catch (error) {
       throw error;
     }
+  }
+
+  /** Create transaction number for ChickeeDuck */
+  private createTrxNo(orderNo: string | number) {
+    let orderString: string =
+      typeof orderNo === 'string' ? orderNo : orderNo.toFixed(0);
+    const year = new Date().getFullYear().toString().substr(-2);
+    const month = ('0' + (new Date().getMonth() + 1)).slice(-2);
+    orderString = ('00' + orderString).slice(-6);
+    const trxNo = this.orderNoPrefix + year + month + orderString;
+    return trxNo;
   }
 }
