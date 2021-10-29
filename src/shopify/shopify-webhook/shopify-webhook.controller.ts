@@ -3,16 +3,23 @@ import {
   Body,
   Controller,
   Headers,
+  Inject,
+  LoggerService,
   Post,
   UseInterceptors,
 } from '@nestjs/common';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { ShopifyInterceptor } from 'src/interceptors/shopify.interceptor';
 import { ShopifyWebhookService } from './shopify-webhook.service';
 
 @Controller('shopify-webhook')
-@UseInterceptors(ShopifyInterceptor)
+// @UseInterceptors(ShopifyInterceptor)
 export class ShopifyWebhookController {
-  constructor(private readonly shopifyWebhookService: ShopifyWebhookService) {}
+  constructor(
+    private readonly shopifyWebhookService: ShopifyWebhookService,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService,
+  ) {}
   /**
    * Webhook for users created an order on Shopify
    * @param req Request information
@@ -38,6 +45,7 @@ export class ShopifyWebhookController {
       }
       return true;
     } catch (error) {
+      this.logger.error(error.message);
       throw error;
     }
   }

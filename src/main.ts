@@ -8,7 +8,9 @@ async function bootstrap() {
     cors: true,
     bodyParser: false,
   });
-  await app.listen(3000);
+  const port: number = parseInt(process.env.PORT) || 3000;
+  console.log(`Starting app at port ${port}`);
+  await app.listen(port);
 }
 
 const API_KEY = process.env.API_KEY;

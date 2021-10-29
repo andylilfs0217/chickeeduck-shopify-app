@@ -35,7 +35,7 @@ import { ScheduleModule } from '@nestjs/schedule';
     }),
     // Http
     HttpModule.registerAsync({
-      useFactory: () => ({ timeout: 5000, maxRedirects: 5 }),
+      useFactory: () => ({ timeout: 10000, maxRedirects: 10 }),
     }),
     // Winston logger
     WinstonModule.forRoot({

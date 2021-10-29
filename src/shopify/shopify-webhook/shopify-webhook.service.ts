@@ -1,12 +1,22 @@
 import { HttpService } from '@nestjs/axios';
-import { Injectable } from '@nestjs/common';
-import { lastValueFrom, map } from 'rxjs';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { catchError, lastValueFrom, map } from 'rxjs';
 import { PathUtils } from 'src/utils/path.utils';
 import * as moment from 'moment';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { InjectRepository } from '@nestjs/typeorm';
+import { TShopifyProductVariants } from 'src/entities/shopify/products.entity';
+import { Repository } from 'typeorm';
 
 @Injectable()
 export class ShopifyWebhookService {
-  constructor(private httpService: HttpService) {}
+  constructor(
+    private httpService: HttpService,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService,
+    @InjectRepository(TShopifyProductVariants)
+    private repo: Repository<TShopifyProductVariants>,
+  ) {}
 
   // Information constants
   salesmanCode = 'D155';
@@ -32,6 +42,7 @@ export class ShopifyWebhookService {
       let loginID: string;
       if (loginRes['Data'] === true)
         loginID = loginRes['WarningMsg'][0] as string;
+      else throw Error('Log in to ChickeeDuck unsuccessful');
 
       // Lock Product
       const lockProcRes = await lastValueFrom(
@@ -44,24 +55,30 @@ export class ShopifyWebhookService {
       const procID = lockProcRes['Data'];
 
       // Generate order for ChickeeDuck server from [data]
-      const chickeeduckOrderJson = this.orderShopifyToChickeeDuck(data);
+      const chickeeduckOrderJson = await this.orderShopifyToChickeeDuck(data);
       const chickeeduckOrderString = JSON.stringify(chickeeduckOrderJson);
 
       // Create order on ChickeeDuck server
       const target = 'SAL';
-      // const updateData = await lastValueFrom(
-      this.updateData(loginID, procID, target, chickeeduckOrderString);
-      // );
+      const updateData = await lastValueFrom(
+        this.updateData(loginID, procID, target, chickeeduckOrderString),
+      );
+      if (
+        updateData['Data'] === null &&
+        updateData['Error'] !== null &&
+        updateData['Error']['ErrCode'] === -1
+      ) {
+        this.logger.error(
+          'Update ChickeeDuck database failed: ' +
+            updateData['Error']['ErrMsg'],
+        );
+      }
 
       // Unlock Product
-      // const unlock = await lastValueFrom(
-      this.unlockProc(loginID, procID);
-      // );
+      const unlock = await lastValueFrom(this.unlockProc(loginID, procID));
 
       // Logout from ChickeeDuck server
-      // const logout = await lastValueFrom(
-      this.logoutChickeeDuckServer(loginID);
-      // );
+      const logout = await lastValueFrom(this.logoutChickeeDuckServer(loginID));
       return true;
     } catch (error) {
       throw error;
@@ -74,7 +91,7 @@ export class ShopifyWebhookService {
    * Transfer Shopify order data to ChickeeDuck order data
    * @param shopifyData Shopify data
    */
-  private orderShopifyToChickeeDuck(shopifyData: any) {
+  private async orderShopifyToChickeeDuck(shopifyData: any) {
     /**
      * Get a payment code when entering information
      * @param company Credit card company
@@ -86,11 +103,14 @@ export class ShopifyWebhookService {
         case 'Visa':
           code = 'VI';
           break;
-        case 'MasterCard':
+        case 'Mastercard':
           code = 'MC';
           break;
         case 'paypal':
           code = 'PL';
+          break;
+        case 'shopify_payments':
+          code = 'SP';
           break;
         default:
           break;
@@ -119,7 +139,37 @@ export class ShopifyWebhookService {
         cashier: this.cashier,
         cashi_no: this.cashierNo,
       },
-      dat: [],
+      dat: await Promise.all(
+        shopifyData['line_items'].map(async (item, idx) => {
+          const itemVariant = await this.repo.findOne(item['variant_id']);
+          const itemCode =
+            !!itemVariant.productBarcode &&
+            itemVariant.productBarcode.length > 0
+              ? itemVariant.productBarcode
+              : itemVariant.productSKU;
+
+          const chickeeDuckItem = {
+            trx_no: this.createTrxNo(shopifyData['order_number']),
+            line_no: parseInt(idx) + 1, // Index starts with 1
+            item_code: itemCode,
+            item_name: item['name'],
+            trx_type: 'S',
+            unit_price: parseFloat(item['price']),
+            item_qty: item['quantity'],
+            item_discount:
+              item['total_discount'] / (item['price'] * item['quantity']), // percentage off
+            trx_sub_amt: item['price'] * item['quantity'],
+            trx_sub_disamt:
+              item['price'] * item['quantity'] - item['total_discount'],
+            mem_a_dis: 0,
+            dis_amt: 0,
+            salesman_code: this.salesmanCode,
+            sh_code: this.cashierNo,
+          };
+
+          return chickeeDuckItem;
+        }),
+      ),
       pay: [
         {
           trx_no: this.createTrxNo(shopifyData['order_number']),
@@ -139,34 +189,6 @@ export class ShopifyWebhookService {
         },
       ],
     };
-    for (const idx in shopifyData['line_items']) {
-      if (
-        Object.prototype.hasOwnProperty.call(shopifyData['line_items'], idx)
-      ) {
-        const item = shopifyData['line_items'][idx];
-
-        const chickeeDuckItem = {
-          trx_no: this.createTrxNo(shopifyData['order_number']),
-          line_no: parseInt(idx) + 1, // Index starts with 1
-          item_code: item['sku'],
-          item_name: item['name'],
-          trx_type: 'S',
-          unit_price: parseFloat(item['price']),
-          item_qty: item['quantity'],
-          item_discount:
-            item['total_discount'] / (item['price'] * item['quantity']), // percentage off
-          trx_sub_amt: item['price'] * item['quantity'],
-          trx_sub_disamt:
-            item['price'] * item['quantity'] - item['total_discount'],
-          mem_a_dis: 0,
-          dis_amt: 0,
-          salesman_code: this.salesmanCode,
-          sh_code: this.cashierNo,
-        };
-
-        chickeeDuckData.dat.push(chickeeDuckItem);
-      }
-    }
     return chickeeDuckData;
   }
 
@@ -196,9 +218,21 @@ export class ShopifyWebhookService {
         numberParms: null,
         datetimeParms: null,
       };
-      return this.httpService
-        .post(apiUrl, JSON.stringify(body))
-        .pipe(map((res) => res.data));
+      this.logger.log(
+        'Placing order to ChickeeDuck server and executing function ',
+      );
+      this.logger.log(body);
+
+      return this.httpService.post(apiUrl, body).pipe(
+        map((res) => {
+          return res.data;
+        }),
+        catchError((e) => {
+          this.logger.error('ExecuteFunction error');
+          this.logger.error(e.message);
+          throw e;
+        }),
+      );
     } catch (error) {
       throw error;
     }
@@ -219,7 +253,14 @@ export class ShopifyWebhookService {
         userPWD: password,
         isBatch: 'Y',
       };
-      return this.httpService.post(apiUrl, body).pipe(map((res) => res.data));
+      return this.httpService.post(apiUrl, body).pipe(
+        map((res) => res.data),
+        catchError((e) => {
+          this.logger.error('LockProcess error');
+          this.logger.error(e.message);
+          throw e;
+        }),
+      );
     } catch (error) {
       throw error;
     }
@@ -235,7 +276,14 @@ export class ShopifyWebhookService {
         loginID: loginID,
         parmData: procID,
       };
-      return this.httpService.post(apiUrl, body).pipe(map((res) => res.data));
+      return this.httpService.post(apiUrl, body).pipe(
+        map((res) => res.data),
+        catchError((e) => {
+          this.logger.error('UnlockProcess error');
+          this.logger.error(e.message);
+          throw e;
+        }),
+      );
     } catch (error) {
       throw error;
     }
@@ -253,9 +301,14 @@ export class ShopifyWebhookService {
         Password: password,
         ProcessType: 1,
       };
-      return this.httpService
-        .post(chickeeDuckApi, body)
-        .pipe(map((res) => res.data));
+      return this.httpService.post(chickeeDuckApi, body).pipe(
+        map((res) => res.data),
+        catchError((e) => {
+          this.logger.error('Login error');
+          this.logger.error(e.message);
+          throw e;
+        }),
+      );
     } catch (error) {
       throw error;
     }
@@ -270,9 +323,17 @@ export class ShopifyWebhookService {
     try {
       const chickeeDuckApi = PathUtils.getChickeeDuckServerAPI('logout');
       const body = loginID;
+      const headers = { 'Content-Type': 'application/json' };
       return this.httpService
-        .post(chickeeDuckApi, body)
-        .pipe(map((res) => res.data));
+        .post(chickeeDuckApi, body, { headers: headers })
+        .pipe(
+          map((res) => res.data),
+          catchError((e) => {
+            this.logger.error('Logout error');
+            this.logger.error(e.message);
+            throw e;
+          }),
+        );
     } catch (error) {
       throw error;
     }
