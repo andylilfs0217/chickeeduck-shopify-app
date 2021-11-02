@@ -13,7 +13,7 @@ import { ShopifyInterceptor } from 'src/interceptors/shopify.interceptor';
 import { ShopifyWebhookService } from './shopify-webhook.service';
 
 @Controller('shopify-webhook')
-// @UseInterceptors(ShopifyInterceptor)
+@UseInterceptors(ShopifyInterceptor)
 export class ShopifyWebhookController {
   constructor(
     private readonly shopifyWebhookService: ShopifyWebhookService,

@@ -126,7 +126,7 @@ export class ShopifyWebhookService {
         trx_date: moment(shopifyData['created_at']).format(
           'YYYY-MM-DD  HH:mm:ss',
         ),
-        user_member: shopifyData['customer']['email'],
+        user_member: shopifyData['customer']['email'].substring(0, 15),
         curr_code: shopifyData['currency'],
         exch_rate: 1,
         trx_bas_amt: parseFloat(shopifyData['total_price']),
@@ -142,17 +142,18 @@ export class ShopifyWebhookService {
       dat: await Promise.all(
         shopifyData['line_items'].map(async (item, idx) => {
           const itemVariant = await this.repo.findOne(item['variant_id']);
-          const itemCode =
-            !!itemVariant.productBarcode &&
-            itemVariant.productBarcode.length > 0
+          const itemCode = !!itemVariant
+            ? !!itemVariant.productBarcode &&
+              itemVariant.productBarcode.length > 0
               ? itemVariant.productBarcode
-              : itemVariant.productSKU;
+              : itemVariant.productSKU
+            : item['sku'];
 
           const chickeeDuckItem = {
             trx_no: this.createTrxNo(shopifyData['order_number']),
             line_no: parseInt(idx) + 1, // Index starts with 1
             item_code: itemCode,
-            item_name: item['name'],
+            item_name: item['name'].substring(0, 40),
             trx_type: 'S',
             unit_price: parseFloat(item['price']),
             item_qty: item['quantity'],
