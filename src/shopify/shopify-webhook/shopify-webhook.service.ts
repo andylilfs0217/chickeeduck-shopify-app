@@ -126,7 +126,11 @@ export class ShopifyWebhookService {
         trx_date: moment(shopifyData['created_at']).format(
           'YYYY-MM-DD  HH:mm:ss',
         ),
-        user_member: shopifyData['customer']['email'].substring(0, 15),
+        user_member: !!shopifyData['customer']['phone']
+          ? shopifyData['customer']['phone'].substring(0, 15)
+          : !!shopifyData['customer']['email']
+          ? shopifyData['customer']['email'].substring(0, 15)
+          : `${shopifyData['customer']['first_name']} ${shopifyData['customer']['last_name']}`,
         curr_code: shopifyData['currency'],
         exch_rate: 1,
         trx_bas_amt: parseFloat(shopifyData['total_price']),
