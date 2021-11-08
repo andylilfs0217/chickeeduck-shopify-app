@@ -2,7 +2,7 @@ import { HttpService } from '@nestjs/axios';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { catchError, lastValueFrom, map } from 'rxjs';
 import { PathUtils } from 'src/utils/path.utils';
-import * as moment from 'moment';
+import * as moment from 'moment-timezone';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { InjectRepository } from '@nestjs/typeorm';
 import { TShopifyProductVariants } from 'src/entities/shopify/products.entity';
@@ -123,9 +123,9 @@ export class ShopifyWebhookService {
         trx_no: this.createTrxNo(shopifyData['order_number']),
         trx_type: 'SAL',
         doc_type: 'SA1',
-        trx_date: moment(shopifyData['created_at']).format(
-          'YYYY-MM-DD  HH:mm:ss',
-        ),
+        trx_date: moment(shopifyData['created_at'])
+          .tz('Asia/Hong_Kong')
+          .format('YYYY-MM-DD  HH:mm:ss'),
         user_member: !!shopifyData['customer']['phone']
           ? shopifyData['customer']['phone'].substring(0, 15)
           : !!shopifyData['customer']['email']
