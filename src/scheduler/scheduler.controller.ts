@@ -1,16 +1,15 @@
 import {
-  BadRequestException,
   Body,
   Controller,
   Inject,
-  InternalServerErrorException,
   LoggerService,
+  Param,
   Put,
 } from '@nestjs/common';
-import { Cron, CronExpression, Interval } from '@nestjs/schedule';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { ShopifyProductVariantDto } from 'src/entities/shopify/products.entity';
-import { SchedulerService } from './scheduler.service';
+import { SchedulerService, ShopifyUpdateStatus } from './scheduler.service';
 
 @Controller('scheduler')
 export class SchedulerController {
@@ -21,7 +20,7 @@ export class SchedulerController {
   ) {}
 
   /**
-   * Get all products in Shopify
+   * Get all products in Shopify at midnight each day
    * @returns A list of products in Shopify
    */
   @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
@@ -53,7 +52,7 @@ export class SchedulerController {
               productBarcode: barcode,
             };
 
-            const updateData = await this.schedulerService.upsertVariant(dto);
+            await this.schedulerService.upsertVariant(dto);
           } catch (error) {}
         });
       });
@@ -63,47 +62,80 @@ export class SchedulerController {
     }
   }
 
-  // @Cron('0 0 0 * * *')
+  /**
+   * Update inventory levels of all products in Shopify at 00:10 each day
+   * @returns List of updated, up-to-date, and not updated products SKU
+   */
+  @Cron('10 0 * * *')
   @Put('inventory')
-  async updateShopifyInventory(@Body() body: any) {
+  async updateShopifyInventory() {
     try {
       this.logger.log('Update Shopify inventory');
-      // TODO: Fetch inventories from ChickeeDuck server
-      // Get item SKU and available inventory of items
-      const sku: string = body.sku;
-      const available = body.inventory;
-      if (sku === null || available === null)
-        throw new BadRequestException(
-          'Missing item SKU or inventory level in the request body',
-        );
-
-      // Get inventory_item_id
-      const query: any = {
-        productBarcode: sku,
+      // Fetch inventories from ChickeeDuck server
+      const inventoryResponse =
+        await this.schedulerService.getInventoryFromChickeeDuck();
+      const attachedResult = inventoryResponse['AttachedResult'];
+      const inventoryListString = attachedResult['ReturnData'];
+      const inventoryList = JSON.parse(inventoryListString)[0];
+      const result = {
+        updated: [],
+        upToDate: [],
+        notUpdated: [],
       };
-      const shopifyProduct = await this.schedulerService.findShopifyProduct(
-        query,
-      );
-      const inventoryItemId = shopifyProduct.shopifyVariantInventoryItemId;
-      const inventoryItemDetails: Array<any> =
-        await this.schedulerService.getInventoryItemDetails(inventoryItemId);
-      const inventoryItemDetail =
-        inventoryItemDetails.length > 0 ? inventoryItemDetails[0] : null;
-      const locationId = inventoryItemDetail?.location_id;
-      const oldInventory = inventoryItemDetail?.available;
-
-      if (locationId !== null && oldInventory !== null) {
-        // Update inventory
-        let data: any = { message: 'Inventory is update to date' };
-        if (oldInventory !== available)
-          data = await this.schedulerService.updateShopifyInventoryItem(
-            locationId,
-            inventoryItemId,
-            available,
-          );
-        return data;
+      // Get item SKU and available inventory of items
+      for await (const item of inventoryList) {
+        const sku = item['item_code'];
+        const available = item['online_qty'];
+        // Get inventory_item_id
+        const response = await this.schedulerService.updateShopifyInventoryItem(
+          sku,
+          available,
+        );
+        // Store update status
+        switch (response.status) {
+          case ShopifyUpdateStatus.updated:
+            result.updated.push(sku);
+            break;
+          case ShopifyUpdateStatus.upToDate:
+            result.upToDate.push(sku);
+            break;
+          case ShopifyUpdateStatus.notUpdated:
+          case ShopifyUpdateStatus.notFound:
+            result.notUpdated.push(sku);
+            break;
+        }
+        if (response.status !== ShopifyUpdateStatus.notFound) {
+          // Wait for one second to prevent Shopify request throttling. (Max.: 2 calls per second for api client)
+          await new Promise((resolve) => setTimeout(resolve, 501));
+        }
       }
-      throw new InternalServerErrorException('Cannot update Shopify inventory');
+      this.logger.log(result);
+      return result;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * Update a specific product inventory level in Shopify
+   * @param sku Product SKU
+   * @param body Request body containing available inventory
+   * @returns Updated result`1
+   */
+  @Put('inventory/:sku')
+  async updateShopifyInventoryBySku(
+    @Param('sku') sku: string,
+    @Body() body: any,
+  ) {
+    try {
+      // Get item SKU and available inventory of items
+      const available = body['available'];
+      // Update inventory in Shopify
+      const response = await this.schedulerService.updateShopifyInventoryItem(
+        sku,
+        available,
+      );
+      return { message: response.message, data: response.data };
     } catch (error) {
       throw error;
     }

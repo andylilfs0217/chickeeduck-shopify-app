@@ -21,6 +21,7 @@ import { SchedulerService } from './scheduler/scheduler.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { TShopifyProductVariants } from './entities/shopify/products.entity';
 import { ScheduleModule } from '@nestjs/schedule';
+import { ChickeeDuckService } from './chickeeduck/chickeeduck.service';
 
 @Module({
   imports: [
@@ -112,6 +113,7 @@ import { ScheduleModule } from '@nestjs/schedule';
     ShopifyService,
     ShopifyWebhookService,
     SchedulerService,
+    ChickeeDuckService,
   ],
 })
 export class AppModule implements NestModule {
