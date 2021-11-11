@@ -4,6 +4,6 @@ export class PathUtils {
   }
 
   static getChickeeDuckServerAPI(path: string): string {
-    return `http://${process.env.CHICKEEDUCK_HOSTNAME}:${process.env.CHICKEEDUCK_PORT}/${path}`;
+    return `http://${process.env.CHICKEEDUCK_HOSTNAME}:${process.env.CHICKEEDUCK_PORT}/CallServiceFunction?functionName=${path}`;
   }
 }

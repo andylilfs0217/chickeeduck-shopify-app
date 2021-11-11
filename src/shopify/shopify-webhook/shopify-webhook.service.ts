@@ -1,12 +1,12 @@
 import { HttpService } from '@nestjs/axios';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { catchError, lastValueFrom, map } from 'rxjs';
-import { PathUtils } from 'src/utils/path.utils';
+import { lastValueFrom } from 'rxjs';
 import * as moment from 'moment-timezone';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { InjectRepository } from '@nestjs/typeorm';
 import { TShopifyProductVariants } from 'src/entities/shopify/products.entity';
 import { Repository } from 'typeorm';
+import { ChickeeDuckService } from 'src/chickeeduck/chickeeduck.service';
 
 @Injectable()
 export class ShopifyWebhookService {
@@ -16,6 +16,7 @@ export class ShopifyWebhookService {
     private readonly logger: LoggerService,
     @InjectRepository(TShopifyProductVariants)
     private repo: Repository<TShopifyProductVariants>,
+    private chickeeDuckRepo: ChickeeDuckService,
   ) {}
 
   // Information constants
@@ -34,7 +35,7 @@ export class ShopifyWebhookService {
     try {
       // Login to ChickeeDuck server
       const loginRes = await lastValueFrom(
-        this.loginChickeeDuckServer(
+        this.chickeeDuckRepo.loginChickeeDuckServer(
           process.env.CHICKEEDUCK_LOGIN_USERNAME,
           process.env.CHICKEEDUCK_LOGIN_PASSWORD,
         ),
@@ -46,7 +47,7 @@ export class ShopifyWebhookService {
 
       // Lock Product
       const lockProcRes = await lastValueFrom(
-        this.lockProc(
+        this.chickeeDuckRepo.lockProc(
           loginID,
           process.env.CHICKEEDUCK_USER_ID,
           process.env.CHICKEEDUCK_USER_PASSWORD,
@@ -60,8 +61,15 @@ export class ShopifyWebhookService {
 
       // Create order on ChickeeDuck server
       const target = 'SAL';
+      const windowAction = 'update__window_data';
       const updateData = await lastValueFrom(
-        this.updateData(loginID, procID, target, chickeeduckOrderString),
+        this.chickeeDuckRepo.updateData(
+          loginID,
+          procID,
+          windowAction,
+          target,
+          chickeeduckOrderString,
+        ),
       );
       if (
         updateData['Data'] === null &&
@@ -75,10 +83,14 @@ export class ShopifyWebhookService {
       }
 
       // Unlock Product
-      const unlock = await lastValueFrom(this.unlockProc(loginID, procID));
+      const unlock = await lastValueFrom(
+        this.chickeeDuckRepo.unlockProc(loginID, procID),
+      );
 
       // Logout from ChickeeDuck server
-      const logout = await lastValueFrom(this.logoutChickeeDuckServer(loginID));
+      const logout = await lastValueFrom(
+        this.chickeeDuckRepo.logoutChickeeDuckServer(loginID),
+      );
       return true;
     } catch (error) {
       throw error;
@@ -195,153 +207,6 @@ export class ShopifyWebhookService {
       ],
     };
     return chickeeDuckData;
-  }
-
-  /**
-   * Update data in ChickeeDuck server
-   */
-  private updateData(
-    loginID: string,
-    procID: string,
-    target: string,
-    data: any,
-  ) {
-    try {
-      const apiUrl = PathUtils.getChickeeDuckServerAPI('ExecuteFunction');
-      const body = {
-        loginID: loginID,
-        procID: procID,
-        funcNo: 'import_data',
-        funcType: 1,
-        funcTableType: 4,
-        pmtID: -1,
-        stringParms: [
-          { Name: 'window__action', Value: 'update__window_data' },
-          { Name: 'window__action_target', Value: target },
-          { Name: 'data', Value: data },
-        ],
-        numberParms: null,
-        datetimeParms: null,
-      };
-      this.logger.log(
-        'Placing order to ChickeeDuck server and executing function ',
-      );
-      this.logger.log(body);
-
-      return this.httpService.post(apiUrl, body).pipe(
-        map((res) => {
-          return res.data;
-        }),
-        catchError((e) => {
-          this.logger.error('ExecuteFunction error');
-          this.logger.error(e.message);
-          throw e;
-        }),
-      );
-    } catch (error) {
-      throw error;
-    }
-  }
-
-  /**
-   * Lock the process in ChickeeDuck server
-   * @param loginID ChickeeDuck login ID
-   * @param username ChickeeDuck username
-   * @param password ChickeeDuck password
-   */
-  private lockProc(loginID: string, username: string, password: string) {
-    try {
-      const apiUrl = PathUtils.getChickeeDuckServerAPI('LockProcess');
-      const body = {
-        loginID: loginID,
-        userID: username,
-        userPWD: password,
-        isBatch: 'Y',
-      };
-      return this.httpService.post(apiUrl, body).pipe(
-        map((res) => res.data),
-        catchError((e) => {
-          this.logger.error('LockProcess error');
-          this.logger.error(e.message);
-          throw e;
-        }),
-      );
-    } catch (error) {
-      throw error;
-    }
-  }
-
-  /**
-   * Unlock the product in ChickeeDuck server
-   */
-  private unlockProc(loginID: string, procID: string) {
-    try {
-      const apiUrl = PathUtils.getChickeeDuckServerAPI('UnlockProcess');
-      const body = {
-        loginID: loginID,
-        parmData: procID,
-      };
-      return this.httpService.post(apiUrl, body).pipe(
-        map((res) => res.data),
-        catchError((e) => {
-          this.logger.error('UnlockProcess error');
-          this.logger.error(e.message);
-          throw e;
-        }),
-      );
-    } catch (error) {
-      throw error;
-    }
-  }
-
-  /**
-   * Log in ChickeeDuck server
-   * @returns ChickeeDuck Login ID
-   */
-  private loginChickeeDuckServer(username: string, password: string) {
-    try {
-      const chickeeDuckApi = PathUtils.getChickeeDuckServerAPI('login');
-      const body = {
-        UserName: username,
-        Password: password,
-        ProcessType: 1,
-      };
-      return this.httpService.post(chickeeDuckApi, body).pipe(
-        map((res) => res.data),
-        catchError((e) => {
-          this.logger.error('Login error');
-          this.logger.error(e.message);
-          throw e;
-        }),
-      );
-    } catch (error) {
-      throw error;
-    }
-  }
-
-  /**
-   * Logout ChickeeDuck server
-   * @param loginID Login ID
-   * @returns true
-   */
-  private logoutChickeeDuckServer(loginID: string) {
-    try {
-      const chickeeDuckApi = PathUtils.getChickeeDuckServerAPI('logout');
-      const body = loginID;
-      const headers = { 'Content-Type': 'application/json' };
-      return this.httpService
-        .post(chickeeDuckApi, body, { headers: headers })
-        .pipe(
-          map((res) => res.data),
-          catchError((e) => {
-            this.logger.error('Logout error');
-            this.logger.error(e.message);
-            throw e;
-          }),
-        );
-    } catch (error) {
-      throw error;
-    }
   }
 
   /** Create transaction number for ChickeeDuck */
