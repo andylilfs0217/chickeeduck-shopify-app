@@ -29,6 +29,8 @@ export class ShopifyWebhookController {
   @Post('orders/create')
   async onReceiveOrderCreate(@Headers() headers: Headers, @Body() body: any) {
     try {
+      // Log incoming request body
+      this.logger.debug(body);
       // Is testing
       const isTest = headers['x-shopify-test'] === 'true';
       // Check Shopify version
