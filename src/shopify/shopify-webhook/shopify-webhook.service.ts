@@ -130,7 +130,7 @@ export class ShopifyWebhookService {
       return code;
     }
 
-    const chickeeDuckData = {
+    const chickeeDuckData: any = {
       hdr: {
         trx_no: this.createTrxNo(shopifyData['order_number']),
         trx_type: 'SAL',
@@ -191,8 +191,6 @@ export class ShopifyWebhookService {
         {
           trx_no: this.createTrxNo(shopifyData['order_number']),
           line_no: 1, //idx
-          // shopifyData['payment_gateway_names'][0] = 'paypal'
-          // shopifyData['gateway'] = 'paypal'
           pay_code: !!shopifyData['payment_details']
             ? getCreditCardCode(
                 shopifyData['payment_details']['credit_card_company'],
@@ -206,6 +204,33 @@ export class ShopifyWebhookService {
         },
       ],
     };
+
+    // Add handling charge
+    const shipping_lines = shopifyData['shipping_lines'];
+    chickeeDuckData.dat = chickeeDuckData.dat.concat(
+      shipping_lines.map((shipment, idx) => {
+        const len = chickeeDuckData.dat.length;
+        const price = parseInt(shipment['price']);
+        const discountedPrice = parseInt(shipment['discounted_price']);
+        const chickeeDuckItem = {
+          trx_no: this.createTrxNo(shopifyData['order_number']),
+          line_no: len + 1 + idx, // Index starts with 1
+          item_code: `MCHANDLE${discountedPrice}`,
+          item_name: `Handling charge${discountedPrice}`,
+          trx_type: 'S',
+          unit_price: price,
+          item_qty: 1,
+          item_discount: 1 - discountedPrice / price, // percentage off
+          trx_sub_amt: price,
+          trx_sub_disamt: discountedPrice,
+          mem_a_dis: 0,
+          dis_amt: 0,
+          salesman_code: this.salesmanCode,
+          sh_code: this.cashierNo,
+        };
+        return chickeeDuckItem;
+      }),
+    );
     return chickeeDuckData;
   }
 

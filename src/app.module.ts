@@ -23,16 +23,17 @@ import { TShopifyProductVariants } from './entities/shopify/products.entity';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ChickeeDuckService } from './chickeeduck/chickeeduck.service';
 
+function loggerFilterOnly(level: string) {
+  return winston.format(function (info) {
+    if (info['level'] === level) return info;
+  })();
+}
+
 @Module({
   imports: [
     // Configure dotenv
     ConfigModule.forRoot({
-      envFilePath: [
-        // '.thinkshops.development.env',
-        '.development.env',
-        '.staging.env',
-        '.production.env',
-      ],
+      envFilePath: ['.development.env', '.staging.env', '.production.env'],
     }),
     // Http
     HttpModule.registerAsync({
@@ -41,33 +42,19 @@ import { ChickeeDuckService } from './chickeeduck/chickeeduck.service';
     // Winston logger
     WinstonModule.forRoot({
       transports: [
-        new winston.transports.File({
-          filename: 'logs/error.log',
-          level: 'error',
-          format: winston.format.combine(
-            winston.format.timestamp(),
-            winston.format.ms(),
-            winston.format.errors(),
-          ),
-        }),
-        new winston.transports.File({
-          filename: 'logs/warn.log',
-          level: 'warn',
-          format: winston.format.combine(
-            winston.format.timestamp(),
-            winston.format.ms(),
-            winston.format.json(),
-          ),
-        }),
-        new winston.transports.File({
-          filename: 'logs/info.log',
-          level: 'info',
-          format: winston.format.combine(
-            winston.format.timestamp(),
-            winston.format.ms(),
-            winston.format.json(),
-          ),
-        }),
+        ...['error', 'warn', 'info', 'debug'].map(
+          (level) =>
+            new winston.transports.File({
+              filename: `logs/${level}.log`,
+              level: level,
+              format: winston.format.combine(
+                loggerFilterOnly(level),
+                winston.format.timestamp(),
+                winston.format.ms(),
+                winston.format.json(),
+              ),
+            }),
+        ),
         new winston.transports.Console({
           level: 'info',
           format: winston.format.combine(
