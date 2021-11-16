@@ -32,6 +32,7 @@ export class ShopifyWebhookService {
    * @returns true
    */
   async updateChickeeDuckInventory(data: any) {
+    let loginID: string;
     try {
       // Login to ChickeeDuck server
       const loginRes = await lastValueFrom(
@@ -40,10 +41,14 @@ export class ShopifyWebhookService {
           process.env.CHICKEEDUCK_LOGIN_PASSWORD,
         ),
       );
-      let loginID: string;
-      if (loginRes['Data'] === true)
+      if (loginRes['Data'] === true) {
         loginID = loginRes['WarningMsg'][0] as string;
-      else throw Error('Log in to ChickeeDuck unsuccessful');
+        this.logger.log(`Login ID: ${loginID}`);
+      } else {
+        if (!!loginRes['Error'])
+          this.logger.error(`${loginRes['Error']['ErrMsg']}`);
+        throw Error('Log in to ChickeeDuck unsuccessful');
+      }
 
       // Lock Product
       const lockProcRes = await lastValueFrom(
@@ -54,6 +59,7 @@ export class ShopifyWebhookService {
         ),
       );
       const procID = lockProcRes['Data'];
+      this.logger.log(`Proc ID: ${procID}`);
 
       // Generate order for ChickeeDuck server from [data]
       const chickeeduckOrderJson = await this.orderShopifyToChickeeDuck(data);
@@ -87,13 +93,16 @@ export class ShopifyWebhookService {
         this.chickeeDuckRepo.unlockProc(loginID, procID),
       );
 
-      // Logout from ChickeeDuck server
-      const logout = await lastValueFrom(
-        this.chickeeDuckRepo.logoutChickeeDuckServer(loginID),
-      );
       return true;
     } catch (error) {
       throw error;
+    } finally {
+      // Logout from ChickeeDuck server
+      if (!!loginID) {
+        const logout = await lastValueFrom(
+          this.chickeeDuckRepo.logoutChickeeDuckServer(loginID),
+        );
+      }
     }
   }
 
