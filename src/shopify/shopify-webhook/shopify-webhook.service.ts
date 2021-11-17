@@ -102,6 +102,7 @@ export class ShopifyWebhookService {
         const logout = await lastValueFrom(
           this.chickeeDuckRepo.logoutChickeeDuckServer(loginID),
         );
+        this.logger.log(`Logged out`);
       }
     }
   }
