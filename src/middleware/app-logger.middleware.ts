@@ -23,7 +23,7 @@ export class AppLoggerMiddleware implements NestMiddleware {
       const contentLength = response.get('content-length');
 
       const msg = `${method} ${originalUrl} ${statusCode} ${contentLength} - ${userAgent} ${ip}`;
-      this.logger.warn(msg);
+      this.logger.log(msg);
     });
 
     next();

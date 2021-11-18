@@ -40,7 +40,7 @@ export class ShopifyWebhookController {
         case '2021-10':
         case '2021-07':
           if (!isTest)
-            this.shopifyWebhookService.updateChickeeDuckInventory(body);
+            await this.shopifyWebhookService.updateChickeeDuckInventory(body);
           break;
         default:
           throw new BadRequestException('Unsupported Shopify API version');
