@@ -7,6 +7,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { TShopifyProductVariants } from 'src/entities/shopify/products.entity';
 import { Repository } from 'typeorm';
 import { ChickeeDuckService } from 'src/chickeeduck/chickeeduck.service';
+import { ShopifyWebhookRecordService } from './shopify-webhook-record.service';
+import { WebhookRecordDto } from 'src/entities/shopify/webhook-records.entity';
 
 @Injectable()
 export class ShopifyWebhookService {
@@ -17,6 +19,7 @@ export class ShopifyWebhookService {
     @InjectRepository(TShopifyProductVariants)
     private repo: Repository<TShopifyProductVariants>,
     private chickeeDuckRepo: ChickeeDuckService,
+    private shopifyWebhookRecordRepo: ShopifyWebhookRecordService,
   ) {}
 
   // Information constants
@@ -34,6 +37,14 @@ export class ShopifyWebhookService {
   async updateChickeeDuckInventory(data: any) {
     let loginID: string;
     try {
+      // Save webhook from Shopify to the database in case of error
+      const trxNo = this.createTrxNo(data['order_number']);
+      const webhookRecordDto: WebhookRecordDto = {
+        trxNo: trxNo,
+        body: data,
+        orderPlaced: false,
+      };
+      await this.shopifyWebhookRecordRepo.upsertOne(webhookRecordDto);
       // Login to ChickeeDuck server
       const loginRes = await lastValueFrom(
         this.chickeeDuckRepo.loginChickeeDuckServer(
@@ -77,6 +88,8 @@ export class ShopifyWebhookService {
           chickeeduckOrderString,
         ),
       );
+
+      // If create order is unsuccessful
       if (
         updateData['Data'] === null &&
         updateData['Error'] !== null &&
@@ -86,12 +99,14 @@ export class ShopifyWebhookService {
           'Update ChickeeDuck database failed: ' +
             updateData['Error']['ErrMsg'],
         );
+      } else {
+        // Update webhook record
+        webhookRecordDto.orderPlaced = true;
+        await this.shopifyWebhookRecordRepo.upsertOne(webhookRecordDto);
       }
 
       // Unlock Product
-      const unlock = await lastValueFrom(
-        this.chickeeDuckRepo.unlockProc(loginID, procID),
-      );
+      await lastValueFrom(this.chickeeDuckRepo.unlockProc(loginID, procID));
 
       return true;
     } catch (error) {
@@ -99,7 +114,7 @@ export class ShopifyWebhookService {
     } finally {
       // Logout from ChickeeDuck server
       if (!!loginID) {
-        const logout = await lastValueFrom(
+        await lastValueFrom(
           this.chickeeDuckRepo.logoutChickeeDuckServer(loginID),
         );
         this.logger.log(`Logged out`);
