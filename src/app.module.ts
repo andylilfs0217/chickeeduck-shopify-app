@@ -22,6 +22,9 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { TShopifyProductVariants } from './entities/shopify/products.entity';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ChickeeDuckService } from './chickeeduck/chickeeduck.service';
+import { TWebhookRecords } from './entities/shopify/webhook-records.entity';
+import { ShopifyWebhookRecordService } from './shopify/shopify-webhook/shopify-webhook-record.service';
+import { ShopifyWebhookRecordController } from './shopify/shopify-webhook/shopify-webhook-record.controller';
 
 function loggerFilterOnly(level: string) {
   return winston.format(function (info) {
@@ -87,13 +90,14 @@ function loggerFilterOnly(level: string) {
     // Scheduler
     ScheduleModule.forRoot(),
     // TypeORM tables
-    TypeOrmModule.forFeature([TShopifyProductVariants]),
+    TypeOrmModule.forFeature([TShopifyProductVariants, TWebhookRecords]),
   ],
   controllers: [
     AppController,
     ShopifyController,
     ShopifyWebhookController,
     SchedulerController,
+    ShopifyWebhookRecordController,
   ],
   providers: [
     AppService,
@@ -101,6 +105,7 @@ function loggerFilterOnly(level: string) {
     ShopifyWebhookService,
     SchedulerService,
     ChickeeDuckService,
+    ShopifyWebhookRecordService,
   ],
 })
 export class AppModule implements NestModule {
