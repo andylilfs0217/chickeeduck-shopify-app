@@ -32,7 +32,7 @@ export class ShopifyWebhookRecordController {
   @Post('incomplete-orders')
   async placeIncompleteOrders() {
     const orders = await this.repo.findAllIncompleteOrder();
-    for (const order of orders) {
+    for (const order of orders[0]) {
       this.shopifyWebhookService.updateChickeeDuckInventory(order.body);
     }
     const res = {
