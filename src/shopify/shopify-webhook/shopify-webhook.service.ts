@@ -42,7 +42,7 @@ export class ShopifyWebhookService {
       const webhookRecordDto: WebhookRecordDto = {
         trxNo: trxNo,
         body: data,
-        orderPlaced: false,
+        orderPlaced: 0,
       };
       await this.shopifyWebhookRecordRepo.upsertOne(webhookRecordDto);
       // Login to ChickeeDuck server
@@ -99,9 +99,14 @@ export class ShopifyWebhookService {
           'Update ChickeeDuck database failed: ' +
             updateData['Error']['ErrMsg'],
         );
+        if (updateData['Error']['ErrMsg'] === `SAL: Trx. no. exists:${trxNo}`) {
+          // Transaction number exists, no need to place the order again
+          webhookRecordDto.orderPlaced = 1;
+          await this.shopifyWebhookRecordRepo.upsertOne(webhookRecordDto);
+        }
       } else {
         // Update webhook record
-        webhookRecordDto.orderPlaced = true;
+        webhookRecordDto.orderPlaced = 1;
         await this.shopifyWebhookRecordRepo.upsertOne(webhookRecordDto);
       }
 

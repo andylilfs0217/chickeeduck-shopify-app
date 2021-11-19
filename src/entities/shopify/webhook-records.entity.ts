@@ -9,8 +9,8 @@ import {
 
 export interface WebhookRecordDto {
   trxNo: string;
-  body?: string;
-  orderPlaced?: boolean;
+  body?: any;
+  orderPlaced?: number;
 }
 
 @Entity()
@@ -19,11 +19,11 @@ export class TWebhookRecords {
   @PrimaryColumn()
   trxNo: string;
 
-  @Column()
-  body: string;
+  @Column({ type: 'json' })
+  body: any;
 
-  @Column({ default: false })
-  orderPlaced: boolean;
+  @Column({ default: 0, type: 'tinyint' })
+  orderPlaced: number;
 
   /** Entity created date */
   @CreateDateColumn()

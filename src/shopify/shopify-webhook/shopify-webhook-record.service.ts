@@ -38,7 +38,7 @@ export class ShopifyWebhookRecordService {
   async findAllIncompleteOrder() {
     const orders = await this.repo.find({
       where: {
-        orderPlaced: false,
+        orderPlaced: 0,
       },
     });
     return orders;
