@@ -10,8 +10,6 @@ import {
 @Injectable()
 export class ShopifyWebhookRecordService {
   constructor(
-    @Inject(WINSTON_MODULE_NEST_PROVIDER)
-    private readonly logger: LoggerService,
     @InjectRepository(TWebhookRecords)
     private repo: Repository<TWebhookRecords>,
   ) {}
@@ -21,7 +19,7 @@ export class ShopifyWebhookRecordService {
   }
 
   async findAll() {
-    return await this.repo.find();
+    return await this.repo.findAndCount();
   }
 
   async upsertOne(record: WebhookRecordDto) {
