@@ -49,15 +49,13 @@ export class ChickeeDuckService {
       );
       this.logger.log(requestBody);
 
-      this.reqRecordsService.saveRequestBody(body, data);
-
       const headers = { 'Content-Type': 'application/json' };
       return this.httpService
         .post(apiUrl, requestBody, { headers: headers })
         .pipe(
           map((res) => {
-            // if (res.data['Data'] !== null || res.data['Error'] === null)
-            //   this.reqRecordsService.saveRequestBody(body, data);
+            if (res.data['Data'] !== null || res.data['Error'] === null)
+              this.reqRecordsService.saveRequestBody(body, data);
             return res.data;
           }),
           catchError((e) => {
