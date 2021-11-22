@@ -1,13 +1,11 @@
 import {
   Entity,
   PrimaryGeneratedColumn,
-  OneToOne,
   Column,
   CreateDateColumn,
   UpdateDateColumn,
   DeleteDateColumn,
 } from 'typeorm';
-import { TRequestBodyRecords } from './request-body-records.entity';
 
 @Entity()
 export class TRequestBodyHeaders {
