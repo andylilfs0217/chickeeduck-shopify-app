@@ -25,6 +25,12 @@ import { ChickeeDuckService } from './chickeeduck/chickeeduck.service';
 import { TWebhookRecords } from './entities/shopify/webhook-records.entity';
 import { ShopifyWebhookRecordService } from './shopify/shopify-webhook/shopify-webhook-record.service';
 import { ShopifyWebhookRecordController } from './shopify/shopify-webhook/shopify-webhook-record.controller';
+import { TRequestBodyRecords } from './entities/chickeeduck/request-body-records.entity';
+import { ChickeeDuckRequestRecordsController } from './chickeeduck/chickeeduck-request-records.controller';
+import { ChickeeDuckRequestRecordsService } from './chickeeduck/chickeeduck-request-records.service';
+import { TRequestBodyData } from './entities/chickeeduck/request-body-data.entity';
+import { TRequestBodyHeaders } from './entities/chickeeduck/request-body-headers.entity';
+import { TRequestBodyPayments } from './entities/chickeeduck/request-body-payments.entity';
 
 function loggerFilterOnly(level: string) {
   return winston.format(function (info) {
@@ -90,7 +96,14 @@ function loggerFilterOnly(level: string) {
     // Scheduler
     ScheduleModule.forRoot(),
     // TypeORM tables
-    TypeOrmModule.forFeature([TShopifyProductVariants, TWebhookRecords]),
+    TypeOrmModule.forFeature([
+      TShopifyProductVariants,
+      TWebhookRecords,
+      TRequestBodyRecords,
+      TRequestBodyData,
+      TRequestBodyHeaders,
+      TRequestBodyPayments,
+    ]),
   ],
   controllers: [
     AppController,
@@ -98,6 +111,7 @@ function loggerFilterOnly(level: string) {
     ShopifyWebhookController,
     SchedulerController,
     ShopifyWebhookRecordController,
+    ChickeeDuckRequestRecordsController,
   ],
   providers: [
     AppService,
@@ -106,6 +120,7 @@ function loggerFilterOnly(level: string) {
     SchedulerService,
     ChickeeDuckService,
     ShopifyWebhookRecordService,
+    ChickeeDuckRequestRecordsService,
   ],
 })
 export class AppModule implements NestModule {

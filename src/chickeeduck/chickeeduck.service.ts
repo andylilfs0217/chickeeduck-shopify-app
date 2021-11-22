@@ -3,6 +3,7 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { catchError, map } from 'rxjs';
 import { PathUtils } from 'src/utils/path.utils';
+import { ChickeeDuckRequestRecordsService } from './chickeeduck-request-records.service';
 
 @Injectable()
 export class ChickeeDuckService {
@@ -10,6 +11,7 @@ export class ChickeeDuckService {
     private httpService: HttpService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
+    private reqRecordsService: ChickeeDuckRequestRecordsService,
   ) {}
 
   /**
@@ -24,7 +26,7 @@ export class ChickeeDuckService {
   ) {
     try {
       const apiUrl = PathUtils.getChickeeDuckServerAPI('ExecuteFunction');
-      const body = `"${JSON.stringify({
+      const body = {
         loginID: loginID,
         procID: procID,
         funcNo: 'import_data',
@@ -38,25 +40,32 @@ export class ChickeeDuckService {
         ],
         numberParms: null,
         datetimeParms: null,
-      })
+      };
+      const requestBody = `"${JSON.stringify(body)
         .replace(/\\/g, '\\\\')
         .replace(/"/g, '\\"')}"`;
       this.logger.log(
         'Placing order to ChickeeDuck server and executing function ',
       );
-      this.logger.log(body);
+      this.logger.log(requestBody);
+
+      this.reqRecordsService.saveRequestBody(body, data);
 
       const headers = { 'Content-Type': 'application/json' };
-      return this.httpService.post(apiUrl, body, { headers: headers }).pipe(
-        map((res) => {
-          return res.data;
-        }),
-        catchError((e) => {
-          this.logger.error('ExecuteFunction error');
-          this.logger.error(e.message);
-          throw e;
-        }),
-      );
+      return this.httpService
+        .post(apiUrl, requestBody, { headers: headers })
+        .pipe(
+          map((res) => {
+            // if (res.data['Data'] !== null || res.data['Error'] === null)
+            //   this.reqRecordsService.saveRequestBody(body, data);
+            return res.data;
+          }),
+          catchError((e) => {
+            this.logger.error('ExecuteFunction error');
+            this.logger.error(e.message);
+            throw e;
+          }),
+        );
     } catch (error) {
       throw error;
     }
