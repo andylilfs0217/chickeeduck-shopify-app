@@ -36,14 +36,14 @@ export class ShopifyWebhookService {
    */
   async updateChickeeDuckInventory(data: any) {
     let loginID: string;
-    const trxNo = this.createTrxNo(data['order_number']);
-    const webhookRecordDto: WebhookRecordDto = {
-      trxNo: trxNo,
-      body: data,
-      orderPlaced: 0,
-    };
     try {
       // Save webhook from Shopify to the database in case of error
+      const trxNo = this.createTrxNo(data['order_number']);
+      const webhookRecordDto: WebhookRecordDto = {
+        trxNo: trxNo,
+        body: data,
+        orderPlaced: 0,
+      };
       await this.shopifyWebhookRecordRepo.upsertOne(webhookRecordDto);
       // Login to ChickeeDuck server
       const loginRes = await lastValueFrom(
@@ -102,10 +102,12 @@ export class ShopifyWebhookService {
         if (updateData['Error']['ErrMsg'] === `SAL: Trx. no. exists:${trxNo}`) {
           // Transaction number exists, no need to place the order again
           webhookRecordDto.orderPlaced = 1;
+          await this.shopifyWebhookRecordRepo.upsertOne(webhookRecordDto);
         }
       } else {
         // Update webhook record
         webhookRecordDto.orderPlaced = 1;
+        await this.shopifyWebhookRecordRepo.upsertOne(webhookRecordDto);
       }
 
       // Unlock Product
@@ -122,7 +124,6 @@ export class ShopifyWebhookService {
         );
         this.logger.log(`Logged out`);
       }
-      await this.shopifyWebhookRecordRepo.upsertOne(webhookRecordDto);
     }
   }
 
@@ -183,6 +184,8 @@ export class ShopifyWebhookService {
         chg_rate: 1,
         cashier: this.cashier,
         cashi_no: this.cashierNo,
+        sh_upd_by: this.shCode,
+        ho_upd_by: this.shCode,
       },
       dat: await Promise.all(
         shopifyData['line_items'].map(async (item, idx) => {
