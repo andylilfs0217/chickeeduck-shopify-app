@@ -22,7 +22,7 @@ export class ShopifyWebhookRecordController {
     return res;
   }
 
-  @Get('incomplete-orders')
+  @Get('find/incomplete-orders')
   async getAllIncompleteOrders() {
     const res = await this.repo.findAllIncompleteOrder();
     return res;
