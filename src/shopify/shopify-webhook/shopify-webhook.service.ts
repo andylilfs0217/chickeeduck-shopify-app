@@ -168,11 +168,15 @@ export class ShopifyWebhookService {
         trx_date: moment(shopifyData['created_at'])
           .tz('Asia/Hong_Kong')
           .format('YYYY-MM-DD  HH:mm:ss'),
-        user_member: !!shopifyData['customer']['phone']
-          ? shopifyData['customer']['phone'].substring(0, 15)
-          : !!shopifyData['customer']['email']
-          ? shopifyData['customer']['email'].substring(0, 15)
-          : `${shopifyData['customer']['first_name']} ${shopifyData['customer']['last_name']}`,
+        // user_member:
+        //   !!shopifyData['customer'] && !!shopifyData['customer']['phone']
+        //     ? shopifyData['customer']['phone'].substring(0, 15)
+        //     : !!shopifyData['customer'] && !!shopifyData['customer']['email']
+        //     ? shopifyData['customer']['email'].substring(0, 15)
+        //     : !!shopifyData['customer']
+        //     ? `${shopifyData['customer']['first_name']} ${shopifyData['customer']['last_name']}`
+        //     : shopifyData['user_id'],
+        user_member: shopifyData['user_id'].toString(),
         curr_code: shopifyData['currency'],
         exch_rate: 1,
         trx_bas_amt: parseFloat(shopifyData['total_price']),
