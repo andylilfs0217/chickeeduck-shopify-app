@@ -15,6 +15,7 @@ export interface ShopifyProductVariantDto {
   shopifyVariantInventoryItemId: number;
   productSKU?: string;
   productBarcode?: string;
+  productInventory?: number;
 }
 
 @Entity()
@@ -46,6 +47,9 @@ export class TShopifyProductVariants {
   /** Shopify product variant barcode */
   @Column({ nullable: true })
   productBarcode: string;
+
+  @Column({ nullable: true })
+  productInventory: number;
 
   /** Entity created date */
   @CreateDateColumn()

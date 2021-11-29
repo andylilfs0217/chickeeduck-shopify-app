@@ -86,6 +86,8 @@ export class SchedulerController {
       for await (const item of inventoryList) {
         const sku = item['item_code'];
         const available = item['online_qty'];
+        // Save latest inventory of the product variant
+        this.schedulerService.updateVariantInventory(sku, available);
         // Get inventory_item_id
         const response = await this.schedulerService.updateShopifyInventoryItem(
           sku,
@@ -130,6 +132,8 @@ export class SchedulerController {
     try {
       // Get item SKU and available inventory of items
       const available = body['available'];
+      // Save latest inventory of the product variant
+      await this.schedulerService.updateVariantInventory(sku, available);
       // Update inventory in Shopify
       const response = await this.schedulerService.updateShopifyInventoryItem(
         sku,

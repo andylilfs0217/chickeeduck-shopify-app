@@ -35,11 +35,40 @@ export class SchedulerService {
     );
   }
 
+  async updateVariantInventory(sku: string, inventory: number) {
+    try {
+      // Find one
+      const data = await this.repo
+        .createQueryBuilder('p')
+        .where('productSKU = :sku', { sku: sku })
+        .orWhere('productBarcode = :sku', { sku: sku })
+        .getOne();
+
+      let upsertData: any;
+      if (data) {
+        // Add inventory
+        data.productInventory = inventory;
+        // Update record
+        upsertData = await this.repo
+          .createQueryBuilder()
+          .update()
+          .set(data)
+          .where('id = :id', { id: data.id })
+          .execute();
+      }
+
+      return upsertData;
+    } catch (error) {
+      throw error;
+    }
+  }
+
   /**
    * Get products and inventories from ChickeeDuck server
    * @returns Inventory and products from ChickeeDuck
    */
   async getInventoryFromChickeeDuck() {
+    let loginID: string;
     try {
       // Login to ChickeeDuck server
       const loginRes = await lastValueFrom(
@@ -48,10 +77,14 @@ export class SchedulerService {
           process.env.CHICKEEDUCK_LOGIN_PASSWORD,
         ),
       );
-      let loginID: string;
-      if (loginRes['Data'] === true)
+      if (loginRes['Data'] === true) {
         loginID = loginRes['WarningMsg'][0] as string;
-      else throw Error('Log in to ChickeeDuck unsuccessful');
+        this.logger.log(`Login ID: ${loginID}`);
+      } else {
+        if (!!loginRes['Error'])
+          this.logger.error(`${loginRes['Error']['ErrMsg']}`);
+        throw Error('Log in to ChickeeDuck unsuccessful');
+      }
 
       // Lock Product
       const lockProcRes = await lastValueFrom(
@@ -62,6 +95,7 @@ export class SchedulerService {
         ),
       );
       const procID = lockProcRes['Data'];
+      this.logger.log(`Proc ID: ${procID}`);
 
       // Generate order for ChickeeDuck server from [data]
       const dataJson = {
@@ -95,13 +129,15 @@ export class SchedulerService {
       // Unlock Product
       await lastValueFrom(this.chickeeDuckService.unlockProc(loginID, procID));
 
+      return updateData['Data'];
+    } catch (error) {
+      throw error;
+    } finally {
       // Logout from ChickeeDuck server
       await lastValueFrom(
         this.chickeeDuckService.logoutChickeeDuckServer(loginID),
       );
-      return updateData['Data'];
-    } catch (error) {
-      throw error;
+      this.logger.log(`Logged out`);
     }
   }
 
