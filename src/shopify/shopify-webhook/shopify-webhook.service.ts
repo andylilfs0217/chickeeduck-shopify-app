@@ -148,6 +148,9 @@ export class ShopifyWebhookService {
         case 'Mastercard':
           code = 'MC';
           break;
+        case 'American Express':
+          code = 'AE';
+          break;
         case 'paypal':
           code = 'PL';
           break;
