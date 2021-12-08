@@ -1,6 +1,6 @@
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import Shopify from '@shopify/shopify-api';
+import Shopify, { DataType } from '@shopify/shopify-api';
 import { RestClient } from '@shopify/shopify-api/dist/clients/rest';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { lastValueFrom } from 'rxjs';
@@ -325,17 +325,17 @@ export class SchedulerService {
           } else {
             // The environment is in production, update inventory level in Shopify
             // TODO: uncomment for production
-            // result.data = (
-            //   await this.client.post({
-            //     path: 'inventory_levels/set',
-            //     data: {
-            //       location_id: locationId,
-            //       inventory_item_id: inventoryItemId,
-            //       available: available,
-            //     },
-            //     type: DataType.JSON,
-            //   })
-            // ).body;
+            result.data = (
+              await this.client.post({
+                path: 'inventory_levels/set',
+                data: {
+                  location_id: locationId,
+                  inventory_item_id: inventoryItemId,
+                  available: available,
+                },
+                type: DataType.JSON,
+              })
+            ).body;
             result.message = `Updated product SKU: \"${sku}\", Name: \"${shopifyProduct.shopifyProductTitle}\". (Original quantity: ${oldInventory}, Quantity: ${available})`;
           }
           result.status = ShopifyUpdateStatus.updated;
