@@ -1,0 +1,74 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <script
+      type="text/javascript"
+      src="http://code.jquery.com/jquery-3.2.1.min.js"
+    ></script>
+    <script src="js/jquery-3.2.1.min.js" type="text/javascript"></script>
+    <title></title>
+  </head>
+  <body>
+    <script type="text/javascript">
+      const BASE_URL = 'http://192.168.12.38:3000';
+      function updateInventory() {
+        const url = BASE_URL + '/scheduler/inventory';
+        $.ajax({
+          async: false,
+          type: 'PUT',
+          url: url,
+          processData: true,
+          success: function (retData) {
+            console.log(retData);
+          },
+          error: function (xhr, textStatus, errorThrown) {},
+        });
+      }
+      function findAllIncompleteOrders() {
+        const url = BASE_URL + '/shopify-webhook-record/find/incomplete-orders';
+        $.ajax({
+          async: false,
+          type: 'GET',
+          url: url,
+          processData: true,
+          success: function (retData) {
+            console.log(retData);
+          },
+          error: function (xhr, textStatus, errorThrown) {},
+        });
+      }
+      function placeAllIncompleteOrders() {
+        const url = BASE_URL + '/shopify-webhook-record/incomplete-orders';
+        $.ajax({
+          async: false,
+          type: 'POST',
+          url: url,
+          processData: true,
+          success: function (retData) {
+            console.log(retData);
+          },
+          error: function (xhr, textStatus, errorThrown) {},
+        });
+      }
+    </script>
+    <div></div>
+    <input
+      type="button"
+      value="Update inventory"
+      onclick="return updateInventory()"
+    />
+    <br />
+    <input
+      type="button"
+      value="Find all incomplete orders"
+      onclick="return findAllIncompleteOrders()"
+    />
+    <br />
+    <input
+      type="button"
+      value="Place all incomplete orders"
+      onclick="return placeAllIncompleteOrders()"
+    />
+    <br />
+  </body>
+</html>
