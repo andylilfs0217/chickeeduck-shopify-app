@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import Shopify, { DataType } from '@shopify/shopify-api';
 import { RestClient } from '@shopify/shopify-api/dist/clients/rest';
+import { ShopifyUtils } from 'src/utils/shopify.utils';
 
 @Injectable()
 export class ShopifyService {
@@ -135,6 +136,41 @@ export class ShopifyService {
         type: DataType.JSON,
       });
       return data.body;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async getActiveProducts() {
+    try {
+      let activeProducts = [];
+      let isFinished = false;
+      let query = {
+        limit: 250,
+        published_status: 'published',
+        status: 'active',
+      };
+      while (!isFinished) {
+        const res = await this.client.get({
+          path: 'products',
+          query: query,
+        });
+        const body = res.body as any;
+        const headers = res.headers;
+        const pagination = ShopifyUtils.parseLinkHeader(headers.get('link'));
+        const next = pagination.next;
+
+        // Store the list of products
+        const productsPart = body.products as Array<any>;
+        activeProducts = activeProducts.concat(productsPart);
+
+        // Continue to get products if there is next page
+        isFinished = !next;
+        if (!isFinished) {
+          query = next.query;
+        }
+      }
+      return activeProducts;
     } catch (error) {
       throw error;
     }

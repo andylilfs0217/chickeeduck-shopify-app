@@ -9,6 +9,7 @@ import {
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { ShopifyProductVariantDto } from 'src/entities/shopify/products.entity';
+import { ShopifyService } from 'src/shopify/shopify.service';
 import { SchedulerService, ShopifyUpdateStatus } from './scheduler.service';
 
 @Controller('scheduler')
@@ -17,6 +18,7 @@ export class SchedulerController {
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     private schedulerService: SchedulerService,
+    private shopifyService: ShopifyService,
   ) {}
 
   /**
@@ -71,48 +73,58 @@ export class SchedulerController {
   async updateShopifyInventory() {
     try {
       this.logger.log('Update Shopify inventory');
-      // Fetch inventories from ChickeeDuck server
-      const inventoryResponse =
-        await this.schedulerService.getInventoryFromChickeeDuck();
-      const attachedResult = inventoryResponse['AttachedResult'];
-      const inventoryListString = attachedResult['ReturnData'];
-      const inventoryList = JSON.parse(inventoryListString)[0];
-      const result = {
-        updated: [],
-        upToDate: [],
-        notUpdated: [],
-      };
-      // Get item SKU and available inventory of items
-      for await (const item of inventoryList) {
-        const sku = item['item_code'];
-        const available = item['online_qty'];
-        // Save latest inventory of the product variant
-        this.schedulerService.updateVariantInventory(sku, available);
-        // Get inventory_item_id
-        const response = await this.schedulerService.updateShopifyInventoryItem(
-          sku,
-          available,
-        );
-        // Store update status
-        switch (response.status) {
-          case ShopifyUpdateStatus.updated:
-            result.updated.push(sku);
-            break;
-          case ShopifyUpdateStatus.upToDate:
-            result.upToDate.push(sku);
-            break;
-          case ShopifyUpdateStatus.notUpdated:
-          case ShopifyUpdateStatus.notFound:
-            result.notUpdated.push(sku);
-            break;
-        }
-        if (response.status !== ShopifyUpdateStatus.notFound) {
-          // Wait for one second to prevent Shopify request throttling. (Max.: 2 calls per second for api client)
-          await new Promise((resolve) => setTimeout(resolve, 501));
+      // // Fetch inventories from ChickeeDuck server
+      // const inventoryResponse =
+      //   await this.schedulerService.getInventoryFromChickeeDuck();
+      // const attachedResult = inventoryResponse['AttachedResult'];
+      // const inventoryListString = attachedResult['ReturnData'];
+      // const inventoryList = JSON.parse(inventoryListString)[0];
+      // const result = {
+      //   updated: [],
+      //   upToDate: [],
+      //   notUpdated: [],
+      // };
+      // // Get item SKU and available inventory of items
+      // for await (const item of inventoryList) {
+      //   const sku = item['item_code'];
+      //   const available = item['online_qty'];
+      //   // Save latest inventory of the product variant
+      //   this.schedulerService.updateVariantInventory(sku, available);
+      //   // Get inventory_item_id
+      //   const response = await this.schedulerService.updateShopifyInventoryItem(
+      //     sku,
+      //     available,
+      //   );
+      //   // Store update status
+      //   switch (response.status) {
+      //     case ShopifyUpdateStatus.updated:
+      //       result.updated.push(sku);
+      //       break;
+      //     case ShopifyUpdateStatus.upToDate:
+      //       result.upToDate.push(sku);
+      //       break;
+      //     case ShopifyUpdateStatus.notUpdated:
+      //     case ShopifyUpdateStatus.notFound:
+      //       result.notUpdated.push(sku);
+      //       break;
+      //   }
+      //   if (response.status !== ShopifyUpdateStatus.notFound) {
+      //     // Wait for one second to prevent Shopify request throttling. (Max.: 2 calls per second for api client)
+      //     await new Promise((resolve) => setTimeout(resolve, 501));
+      //   }
+      // }
+      // this.logger.log(result);
+      // return result;
+
+      // Fetch active products from Shopify
+      const activeProducts = await this.shopifyService.getActiveProducts();
+      for await (const activeProduct of activeProducts) {
+        // For each product variant
+        for await (const activeVariant of activeProduct.variants) {
+          const variantId = activeVariant.id;
         }
       }
-      this.logger.log(result);
-      return result;
+      return activeProducts;
     } catch (error) {
       throw error;
     }
