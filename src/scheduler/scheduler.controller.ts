@@ -23,7 +23,7 @@ export class SchedulerController {
    * Get all products in Shopify at midnight each day
    * @returns A list of products in Shopify
    */
-  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
+  @Cron(CronExpression.EVERY_DAY_AT_8PM)
   @Put('product-variants')
   async updateProductVariants() {
     try {
@@ -66,7 +66,7 @@ export class SchedulerController {
    * Update inventory levels of all products in Shopify at 00:10 each day
    * @returns List of updated, up-to-date, and not updated products SKU
    */
-  @Cron('10 0 * * *')
+  @Cron('10 16 * * *')
   @Put('inventory')
   async updateShopifyInventory() {
     try {
