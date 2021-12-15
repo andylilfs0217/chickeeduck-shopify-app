@@ -353,4 +353,13 @@ export class SchedulerService {
       throw error;
     }
   }
+
+  async getVariantByVariantId(variantId: number) {
+    try {
+      const variant = await this.repo.findOne(variantId);
+      return variant;
+    } catch (error) {
+      throw error;
+    }
+  }
 }
