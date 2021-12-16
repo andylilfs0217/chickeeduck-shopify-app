@@ -89,37 +89,6 @@ export class SchedulerController {
         upToDate: [],
         notUpdated: [],
       };
-      // // Get item SKU and available inventory of items
-      // for await (const item of inventoryList) {
-      //   const sku = item['item_code'];
-      //   const available = item['online_qty'];
-      //   // Save latest inventory of the product variant
-      //   this.schedulerService.updateVariantInventory(sku, available);
-      //   // Get inventory_item_id
-      //   const response = await this.schedulerService.updateShopifyInventoryItem(
-      //     sku,
-      //     available,
-      //   );
-      //   // Store update status
-      //   switch (response.status) {
-      //     case ShopifyUpdateStatus.updated:
-      //       result.updated.push(sku);
-      //       break;
-      //     case ShopifyUpdateStatus.upToDate:
-      //       result.upToDate.push(sku);
-      //       break;
-      //     case ShopifyUpdateStatus.notUpdated:
-      //     case ShopifyUpdateStatus.notFound:
-      //       result.notUpdated.push(sku);
-      //       break;
-      //   }
-      //   if (response.status !== ShopifyUpdateStatus.notFound) {
-      //     // Wait for one second to prevent Shopify request throttling. (Max.: 2 calls per second for api client)
-      //     await new Promise((resolve) => setTimeout(resolve, 501));
-      //   }
-      // }
-      // this.logger.log(result);
-      // return result;
 
       // Fetch active products from Shopify
       const activeProducts = await this.shopifyService.getActiveProducts();
