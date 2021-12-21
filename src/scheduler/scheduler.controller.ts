@@ -95,49 +95,54 @@ export class SchedulerController {
       for await (const activeProduct of activeProducts) {
         // For each product variant
         for await (const activeVariant of activeProduct.variants) {
-          const variantId = activeVariant.id;
-          const variant = await this.schedulerService.getVariantByVariantId(
-            variantId,
-          );
-          if (!variant) {
-            this.logger.log(
-              `Variant ID: ${variantId} not found in the database`,
+          try {
+            const variantId = activeVariant.id;
+            const variant = await this.schedulerService.getVariantByVariantId(
+              variantId,
             );
-            continue;
-          }
-          let sku: string;
-          if (!!inventoryMap[variant.productBarcode]) {
-            sku = variant.productBarcode;
-          } else if (!!inventoryMap[variant.productSKU]) {
-            sku = variant.productSKU;
-          }
-          if (!!sku) {
-            const available = inventoryMap[sku];
-            // Save latest inventory of the product variant
-            this.schedulerService.updateVariantInventory(sku, available);
-            // Get inventory_item_id
-            const response =
-              await this.schedulerService.updateShopifyInventoryItem(
-                sku,
-                available,
+            if (!variant) {
+              this.logger.log(
+                `Variant ID: ${variantId} not found in the database`,
               );
-            // Store update status
-            switch (response.status) {
-              case ShopifyUpdateStatus.updated:
-                result.updated.push(sku);
-                break;
-              case ShopifyUpdateStatus.upToDate:
-                result.upToDate.push(sku);
-                break;
-              case ShopifyUpdateStatus.notUpdated:
-              case ShopifyUpdateStatus.notFound:
-                result.notUpdated.push(sku);
-                break;
+              continue;
             }
-            if (response.status !== ShopifyUpdateStatus.notFound) {
-              // Wait for one second to prevent Shopify request throttling. (Max.: 2 calls per second for api client)
-              await new Promise((resolve) => setTimeout(resolve, 501));
+            let sku: string;
+            if (!!inventoryMap[variant.productBarcode]) {
+              sku = variant.productBarcode;
+            } else if (!!inventoryMap[variant.productSKU]) {
+              sku = variant.productSKU;
             }
+            if (!!sku) {
+              const available = inventoryMap[sku];
+              // Save latest inventory of the product variant
+              this.schedulerService.updateVariantInventory(sku, available);
+              // Get inventory_item_id
+              const response =
+                await this.schedulerService.updateShopifyInventoryItem(
+                  sku,
+                  available,
+                );
+              // Store update status
+              switch (response.status) {
+                case ShopifyUpdateStatus.updated:
+                  result.updated.push(sku);
+                  break;
+                case ShopifyUpdateStatus.upToDate:
+                  result.upToDate.push(sku);
+                  break;
+                case ShopifyUpdateStatus.notUpdated:
+                case ShopifyUpdateStatus.notFound:
+                  result.notUpdated.push(sku);
+                  break;
+              }
+              if (response.status !== ShopifyUpdateStatus.notFound) {
+                // Wait for one second to prevent Shopify request throttling. (Max.: 2 calls per second for api client)
+                await new Promise((resolve) => setTimeout(resolve, 501));
+              }
+            }
+          } catch (error) {
+            this.logger.error(error.message);
+            continue;
           }
         }
       }
