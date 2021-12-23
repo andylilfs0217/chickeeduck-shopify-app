@@ -25,7 +25,8 @@ export class ChickeeDuckService {
     data: any,
   ) {
     try {
-      const apiUrl = PathUtils.getChickeeDuckServerAPI('ExecuteFunction');
+      const apiUrl =
+        PathUtils.getChickeeDuckServerAPIFunction('ExecuteFunction');
       const body = {
         loginID: loginID,
         procID: procID,
@@ -77,7 +78,7 @@ export class ChickeeDuckService {
    */
   public lockProc(loginID: string, username: string, password: string) {
     try {
-      const apiUrl = PathUtils.getChickeeDuckServerAPI('LockProcess');
+      const apiUrl = PathUtils.getChickeeDuckServerAPIFunction('LockProcess');
       const body = `"${JSON.stringify({
         loginID: loginID,
         userID: username,
@@ -105,7 +106,7 @@ export class ChickeeDuckService {
    */
   public unlockProc(loginID: string, procID: string) {
     try {
-      const apiUrl = PathUtils.getChickeeDuckServerAPI('UnlockProcess');
+      const apiUrl = PathUtils.getChickeeDuckServerAPIFunction('UnlockProcess');
       const body = `"${JSON.stringify({
         loginID: loginID,
         parmData: procID,
@@ -132,7 +133,7 @@ export class ChickeeDuckService {
    */
   public loginChickeeDuckServer(username: string, password: string) {
     try {
-      const chickeeDuckApi = PathUtils.getChickeeDuckServerAPI('Login');
+      const chickeeDuckApi = PathUtils.getChickeeDuckServerAPIFunction('Login');
       const body = `"${JSON.stringify({
         UserName: username,
         Password: password,
@@ -163,7 +164,8 @@ export class ChickeeDuckService {
    */
   public logoutChickeeDuckServer(loginID: string) {
     try {
-      const chickeeDuckApi = PathUtils.getChickeeDuckServerAPI('logout');
+      const chickeeDuckApi =
+        PathUtils.getChickeeDuckServerAPIFunction('logout');
       const body = `"${loginID}"`;
       const headers = { 'Content-Type': 'application/json;charset=utf-8' };
       return this.httpService
@@ -179,5 +181,36 @@ export class ChickeeDuckService {
     } catch (error) {
       // throw error;
     }
+  }
+
+  private executeSQLQuery(loginID: string, query: string) {
+    try {
+      const chickeeDuckApi =
+        PathUtils.getChickeeDuckServerAPI('ExecuteSQLQuery');
+      const body = {
+        loginID: loginID,
+        parmData: [
+          {
+            sqlStr: query,
+          },
+        ],
+      };
+      const headers = { 'Content-Type': 'application/json;charset=utf-8' };
+      return this.httpService
+        .post(chickeeDuckApi, body, { headers: headers })
+        .pipe(
+          map((res) => res.data),
+          catchError((e) => {
+            this.logger.error('ExecuteSQLQuery error');
+            this.logger.error(e.message);
+            throw e;
+          }),
+        );
+    } catch (error) {}
+  }
+
+  public getAllProductInventory(loginID: string, whcode: string) {
+    const query = `select whcode, item_code, isnull(online_qty,0)-isnull(commit_qty,0) as online_qty from wh_bal where whcode='${whcode}'`;
+    return this.executeSQLQuery(loginID, query);
   }
 }

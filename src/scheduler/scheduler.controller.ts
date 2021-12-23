@@ -21,6 +21,8 @@ export class SchedulerController {
     private shopifyService: ShopifyService,
   ) {}
 
+  private WHCODE = 'SW004';
+
   /**
    * Get all products in Shopify at midnight each day
    * @returns A list of products in Shopify
@@ -75,13 +77,16 @@ export class SchedulerController {
       this.logger.log('Update Shopify inventory');
       // Fetch inventories from ChickeeDuck server
       const inventoryResponse =
-        await this.schedulerService.getInventoryFromChickeeDuck();
-      const attachedResult = inventoryResponse['AttachedResult'];
-      const inventoryListString = attachedResult['ReturnData'];
-      const inventoryList = JSON.parse(inventoryListString)[0];
+        await this.schedulerService.getInventoryFromChickeeDuck(this.WHCODE);
+      // const attachedResult = inventoryResponse['AttachedResult'];
+      // const inventoryListString = attachedResult['ReturnData'];
+      // const inventoryList = JSON.parse(inventoryListString)[0];
+      const inventoryList = JSON.parse(inventoryResponse)[0];
       // Change inventory list to hash map
       const inventoryMap = inventoryList.reduce((map, obj) => {
-        map[obj['item_code']] = obj['online_qty'];
+        const itemCode = obj['item_code'].trim();
+        const onlineQty = obj['online_qty'];
+        map[itemCode] = onlineQty;
         return map;
       }, {});
       const result = {
@@ -89,6 +94,13 @@ export class SchedulerController {
         upToDate: [],
         notUpdated: [],
       };
+
+      // For each product variant from ChickeeDuck server
+      for (const variantSKU of Object.keys(inventoryMap)) {
+        const variantQty = inventoryMap[variantSKU];
+        // Save latest inventory of the product variant
+        this.schedulerService.updateVariantInventory(variantSKU, variantQty);
+      }
 
       // Fetch active products from Shopify
       const activeProducts = await this.shopifyService.getActiveProducts();
@@ -114,8 +126,6 @@ export class SchedulerController {
             }
             if (!!sku) {
               const available = inventoryMap[sku];
-              // Save latest inventory of the product variant
-              this.schedulerService.updateVariantInventory(sku, available);
               // Get inventory_item_id
               const response =
                 await this.schedulerService.updateShopifyInventoryItem(

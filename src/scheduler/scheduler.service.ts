@@ -59,7 +59,9 @@ export class SchedulerService {
 
       return upsertData;
     } catch (error) {
-      throw error;
+      this.logger.error(
+        `${sku} (Available: ${inventory}) cannot be updated in the database`,
+      );
     }
   }
 
@@ -67,7 +69,7 @@ export class SchedulerService {
    * Get products and inventories from ChickeeDuck server
    * @returns Inventory and products from ChickeeDuck
    */
-  async getInventoryFromChickeeDuck() {
+  async getInventoryFromChickeeDuck(whCode: string) {
     let loginID: string;
     try {
       // Login to ChickeeDuck server
@@ -97,23 +99,9 @@ export class SchedulerService {
       const procID = lockProcRes['Data'];
       this.logger.log(`Proc ID: ${procID}`);
 
-      // Generate order for ChickeeDuck server from [data]
-      const dataJson = {
-        retrieve: 'SW004',
-      };
-      const dataString = JSON.stringify(dataJson);
-
       // Get inventory details from ChickeeDuck server
-      const target = 'WH_BAL';
-      const windowAction = 'get__window_data';
       const updateData = await lastValueFrom(
-        this.chickeeDuckService.updateData(
-          loginID,
-          procID,
-          windowAction,
-          target,
-          dataString,
-        ),
+        this.chickeeDuckService.getAllProductInventory(loginID, whCode),
       );
       if (
         updateData['Data'] === null &&
@@ -324,7 +312,6 @@ export class SchedulerService {
               'This server is not in production. No actions are being executed';
           } else {
             // The environment is in production, update inventory level in Shopify
-            // TODO: uncomment for production
             result.data = (
               await this.client.post({
                 path: 'inventory_levels/set',
