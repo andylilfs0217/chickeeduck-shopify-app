@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Post } from '@nestjs/common';
+import { Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { ShopifyWebhookRecordService } from './shopify-webhook-record.service';
 import { ShopifyWebhookService } from './shopify-webhook.service';
@@ -17,8 +17,8 @@ export class ShopifyWebhookRecordController {
   }
 
   @Get()
-  async getAll() {
-    const res = await this.repo.findAll();
+  async getAll(@Query('limit') limit: number, @Query('page') page: number) {
+    const res = await this.repo.findAll(limit, page);
     return res;
   }
 
