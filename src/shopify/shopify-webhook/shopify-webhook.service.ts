@@ -204,6 +204,18 @@ export class ShopifyWebhookService {
               ? itemVariant.productBarcode
               : itemVariant.productSKU
             : item['sku'];
+          let trx_sub_disamt = 0;
+
+          if (item['discount_allocations'].length > 0) {
+            let temp = 0;
+            item['discount_allocations'].forEach(
+              (discount: any) => (temp += discount['amount']),
+            );
+            trx_sub_disamt = temp * item['quantity'];
+          } else {
+            trx_sub_disamt =
+              item['price'] * item['quantity'] - item['total_discount'];
+          }
 
           const chickeeDuckItem = {
             trx_no: this.createTrxNo(shopifyData['order_number']),
@@ -216,13 +228,7 @@ export class ShopifyWebhookService {
             item_discount:
               item['total_discount'] / (item['price'] * item['quantity']), // percentage off
             trx_sub_amt: item['price'] * item['quantity'],
-            trx_sub_disamt:
-              item['discount_allocations'].length > 0
-                ? item['discount_allocations'].reduce(
-                    (a: any, b: any) => a['amount'] + b['amount'],
-                    0,
-                  ) * item['quantity']
-                : item['price'] * item['quantity'] - item['total_discount'],
+            trx_sub_disamt: trx_sub_disamt,
             mem_a_dis: 0,
             dis_amt: 0,
             salesman_code: this.salesmanCode,
