@@ -217,7 +217,12 @@ export class ShopifyWebhookService {
               item['total_discount'] / (item['price'] * item['quantity']), // percentage off
             trx_sub_amt: item['price'] * item['quantity'],
             trx_sub_disamt:
-              item['price'] * item['quantity'] - item['total_discount'],
+              item['discount_allocations'].length > 0
+                ? item['discount_allocations'].reduce(
+                    (a: any, b: any) => a['amount'] + b['amount'],
+                    0,
+                  ) * item['quantity']
+                : item['price'] * item['quantity'] - item['total_discount'],
             mem_a_dis: 0,
             dis_amt: 0,
             salesman_code: this.salesmanCode,
