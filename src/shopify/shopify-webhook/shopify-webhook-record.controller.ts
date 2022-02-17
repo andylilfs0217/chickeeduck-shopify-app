@@ -17,8 +17,12 @@ export class ShopifyWebhookRecordController {
   }
 
   @Get()
-  async getAll(@Query('limit') limit: number, @Query('page') page: number) {
-    const res = await this.repo.findAll(limit, page);
+  async getAll(
+    @Query('limit') limit: number,
+    @Query('page') page: number,
+    @Query('order') order: string,
+  ) {
+    const res = await this.repo.findAll(limit, page, order);
     return res;
   }
 

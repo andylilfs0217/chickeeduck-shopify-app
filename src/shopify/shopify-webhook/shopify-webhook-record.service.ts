@@ -17,9 +17,9 @@ export class ShopifyWebhookRecordService {
     return await this.repo.findOne(record.trxNo);
   }
 
-  async findAll(limit = 30, page = 0) {
+  async findAll(limit = 30, page = 0, order = 'DESC') {
     return await this.repo.findAndCount({
-      order: { trxNo: 'DESC' },
+      order: { trxNo: order },
       take: limit,
       page: page,
     } as any);
