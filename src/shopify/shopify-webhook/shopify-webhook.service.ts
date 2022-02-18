@@ -207,11 +207,13 @@ export class ShopifyWebhookService {
           let trx_sub_disamt = 0;
 
           if (item['discount_allocations'].length > 0) {
-            let temp = 0;
+            let tempDiscount = 0;
             item['discount_allocations'].forEach(
-              (discount: any) => (temp += discount['amount']),
+              (discount: any) => (tempDiscount += discount['amount']),
             );
-            trx_sub_disamt = temp * item['quantity'];
+            trx_sub_disamt =
+              (item['price'] - tempDiscount) * item['quantity'] -
+              item['total_discount'];
           } else {
             trx_sub_disamt =
               item['price'] * item['quantity'] - item['total_discount'];
