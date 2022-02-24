@@ -70,7 +70,10 @@ export class SchedulerController {
    * Update inventory levels of all products in Shopify at 00:10 each day
    * @returns List of updated, up-to-date, and not updated products SKU
    */
-  @Cron('10 16 * * *')
+  @Cron('10 16 * * *') // HKT 00:00
+  @Cron('10 0 * * *') // HKT 08:00
+  @Cron('10 12 * * *') // HKT 20:00
+  @Cron('10 7 * * *') // HKT 15:00
   @Put('inventory')
   async updateShopifyInventory() {
     try {
