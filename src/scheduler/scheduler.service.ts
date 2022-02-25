@@ -174,13 +174,7 @@ export class SchedulerService {
   async upsertVariant(variant: ShopifyProductVariantDto) {
     try {
       // Find one
-      const query: any = {};
-      if (variant.productSKU.length > 0) query.productSKU = variant.productSKU;
-      if (variant.productBarcode.length > 0)
-        query.productBarcode = variant.productBarcode;
-      let data: any = await this.repo.findOne(variant.id, {
-        where: query,
-      });
+      const data: any = await this.repo.findOne(variant.id);
 
       if (!data) {
         // Delete old record
@@ -188,28 +182,22 @@ export class SchedulerService {
           variant.productSKU.length > 0 &&
           variant.productBarcode.length > 0
         ) {
-          await this.repo.delete({
+          await this.repo.softDelete({
             productSKU: variant.productSKU,
             productBarcode: variant.productBarcode,
           });
         }
         // Create record
-        data = await this.repo
-          .createQueryBuilder()
-          .insert()
-          .values(variant)
-          .execute();
+        await this.repo.createQueryBuilder().insert().values(variant).execute();
       } else {
         // Update record
-        data = await this.repo
+        await this.repo
           .createQueryBuilder()
           .update()
           .set(variant)
           .where('id = :id', { id: variant.id })
           .execute();
       }
-
-      return data;
     } catch (error) {
       throw error;
     }
