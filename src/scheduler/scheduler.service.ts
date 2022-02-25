@@ -174,9 +174,25 @@ export class SchedulerService {
   async upsertVariant(variant: ShopifyProductVariantDto) {
     try {
       // Find one
-      let data: any = await this.repo.findOne(variant.id);
+      const query: any = {};
+      if (variant.productSKU.length > 0) query.productSKU = variant.productSKU;
+      if (variant.productBarcode.length > 0)
+        query.productBarcode = variant.productBarcode;
+      let data: any = await this.repo.findOne(variant.id, {
+        where: query,
+      });
 
       if (!data) {
+        // Delete old record
+        if (
+          variant.productSKU.length > 0 &&
+          variant.productBarcode.length > 0
+        ) {
+          await this.repo.delete({
+            productSKU: variant.productSKU,
+            productBarcode: variant.productBarcode,
+          });
+        }
         // Create record
         data = await this.repo
           .createQueryBuilder()
