@@ -47,7 +47,6 @@ export class ShopifyWebhookRecordController {
     return res;
   }
 
-  @Cron(CronExpression.EVERY_MINUTE)
   @Get('info/price')
   async getPriceAndPayment(
     @Query('from') fromTrxNo: string,
