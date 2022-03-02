@@ -3,6 +3,7 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { ShopifyWebhookRecordService } from './shopify-webhook-record.service';
 import { ShopifyWebhookService } from './shopify-webhook.service';
 import { parse } from 'json2csv';
+import * as fs from 'fs';
 
 @Controller('shopify-webhook-record')
 export class ShopifyWebhookRecordController {
@@ -46,6 +47,7 @@ export class ShopifyWebhookRecordController {
     return res;
   }
 
+  @Cron(CronExpression.EVERY_MINUTE)
   @Get('info/price')
   async getPriceAndPayment(
     @Query('from') fromTrxNo: string,
@@ -53,6 +55,7 @@ export class ShopifyWebhookRecordController {
   ) {
     const resJson = await this.repo.getPriceAndPayment(fromTrxNo, toTrxNo);
     const resCsv = parse(resJson);
+    fs.writeFile('../../../price.csv', resCsv, () => {});
     return resCsv;
   }
 }
