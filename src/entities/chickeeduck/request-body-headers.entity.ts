@@ -9,8 +9,8 @@ import {
 
 @Entity()
 export class TRequestBodyHeaders {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
+  @PrimaryGeneratedColumn()
+  id: number;
 
   @Column({ nullable: true })
   trx_type: string;

@@ -11,8 +11,8 @@ import { TRequestBodyRecords } from './request-body-records.entity';
 
 @Entity()
 export class TRequestBodyData {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
+  @PrimaryGeneratedColumn()
+  id: number;
 
   @Column({ nullable: true })
   dis_amt: number;

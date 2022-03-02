@@ -11,8 +11,8 @@ import { TRequestBodyRecords } from './request-body-records.entity';
 
 @Entity()
 export class TRequestBodyPayments {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
+  @PrimaryGeneratedColumn()
+  id: number;
 
   @ManyToOne(() => TRequestBodyRecords, (record) => record.payments, {
     onDelete: 'CASCADE',
