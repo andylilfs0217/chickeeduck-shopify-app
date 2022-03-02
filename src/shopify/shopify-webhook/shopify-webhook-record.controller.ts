@@ -55,7 +55,7 @@ export class ShopifyWebhookRecordController {
   ) {
     const resJson = await this.repo.getPriceAndPayment(fromTrxNo, toTrxNo);
     const resCsv = parse(resJson);
-    fs.writeFile('../../../price.csv', resCsv, () => {});
+    fs.writeFile('price.csv', resCsv, () => {});
     return resCsv;
   }
 }
