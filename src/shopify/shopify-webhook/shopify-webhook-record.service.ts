@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { QueryBuilder, Repository } from 'typeorm';
 import {
   TWebhookRecords,
   WebhookRecordDto,
@@ -43,5 +43,38 @@ export class ShopifyWebhookRecordService {
       },
     });
     return orders;
+  }
+
+  async getPriceAndPayment(fromTrxNo: string, toTrxNo?: string) {
+    const qb = this.repo
+      .createQueryBuilder('p')
+      .select()
+      .where('p.trxNo >= :fromTrxNo', { fromTrxNo });
+    if (toTrxNo && toTrxNo.length > 0)
+      qb.andWhere('p.trxNo <= :toTrxNo', { toTrxNo });
+    const orders: any[] = await qb.getMany();
+    const res = [];
+    for (const order of orders) {
+      const trxNo = order.trxNo;
+      for (const item of order.body.line_items) {
+        const sku = item.sku;
+        const price = item.price * item.quantity - item.total_discount;
+        let tempDiscount = 0;
+        item['discount_allocations'].forEach(
+          (discount: any) => (tempDiscount += discount['amount']),
+        );
+        const dis_amt =
+          (item['price'] - tempDiscount) * item['quantity'] -
+          item['total_discount'];
+        const obj = {
+          trxNo,
+          sku,
+          price,
+          dis_amt,
+        };
+        res.push(obj);
+      }
+    }
+    return res;
   }
 }

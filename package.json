@@ -23,7 +23,7 @@
     "prepare": "husky install"
   },
   "dependencies": {
-    "@nestjs/axios": "^0.0.1",
+    "@nestjs/axios": "^0.0.6",
     "@nestjs/common": "^8.0.0",
     "@nestjs/config": "^1.0.1",
     "@nestjs/core": "^8.0.0",
@@ -33,6 +33,7 @@
     "@shopify/shopify-api": "^1.4.1",
     "crypto-js": "^4.1.1",
     "express": "^4.17.1",
+    "json2csv": "^5.0.7",
     "moment": "^2.29.1",
     "moment-timezone": "^0.5.33",
     "mysql2": "^2.3.0",

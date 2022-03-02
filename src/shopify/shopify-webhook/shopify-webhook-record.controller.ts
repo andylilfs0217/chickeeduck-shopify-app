@@ -2,6 +2,7 @@ import { Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { ShopifyWebhookRecordService } from './shopify-webhook-record.service';
 import { ShopifyWebhookService } from './shopify-webhook.service';
+import { parse } from 'json2csv';
 
 @Controller('shopify-webhook-record')
 export class ShopifyWebhookRecordController {
@@ -43,5 +44,15 @@ export class ShopifyWebhookRecordController {
       message: `Updated incomplete orders. (Total orders: ${orders[0].length})`,
     };
     return res;
+  }
+
+  @Get('info/price')
+  async getPriceAndPayment(
+    @Query('from') fromTrxNo: string,
+    @Query('to') toTrxNo: string,
+  ) {
+    const resJson = await this.repo.getPriceAndPayment(fromTrxNo, toTrxNo);
+    const resCsv = parse(resJson);
+    return resCsv;
   }
 }
