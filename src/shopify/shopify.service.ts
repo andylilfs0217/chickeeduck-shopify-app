@@ -2,12 +2,13 @@ import { Injectable } from '@nestjs/common';
 import Shopify, { DataType } from '@shopify/shopify-api';
 import { RestClient } from '@shopify/shopify-api/dist/clients/rest';
 import { ShopifyUtils } from 'src/utils/shopify.utils';
+import { ShopifyWebhookService } from './shopify-webhook/shopify-webhook.service';
 
 @Injectable()
 export class ShopifyService {
   client: RestClient;
   API_VERSION: string;
-  constructor() {
+  constructor(private shopifyWebhookService: ShopifyWebhookService) {
     this.API_VERSION = process.env.API_VERSION;
     this.client = new Shopify.Clients.Rest(
       process.env.HOSTNAME,
@@ -44,13 +45,20 @@ export class ShopifyService {
    * Get all orders on ChickeeDuck Shopify
    * @returns All Shopify orders
    */
-  async getAllOrders() {
+  async getAllOrders(
+    createdAtMin?: string,
+    createdAtMax?: string,
+    fields?: string,
+    status = 'any',
+  ) {
     try {
+      const query: any = { api_version: this.API_VERSION, status: status };
+      if (createdAtMin) query.created_at_min = createdAtMin;
+      if (createdAtMax) query.created_at_max = createdAtMax;
+      if (fields) query.fields = fields;
       const data = await this.client.get({
         path: 'orders',
-        query: {
-          api_version: this.API_VERSION,
-        },
+        query: query,
       });
       return data.body;
     } catch (error) {
@@ -171,6 +179,40 @@ export class ShopifyService {
         }
       }
       return activeProducts;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * Get a specific order
+   * @param id Order ID in Shopify
+   * @param fields Desired fields of the order (optional)
+   * @returns Order details
+   */
+  async getOrder(id: string, fields?: string) {
+    try {
+      const query: any = { api_version: this.API_VERSION };
+      if (fields) query.fields = fields;
+      const data = await this.client.get({
+        path: `orders/${id}`,
+        query: query,
+      });
+      return data.body;
+    } catch (error) {
+      return error;
+    }
+  }
+
+  /**
+   * Create an order in ChickeeDuck server by getting the information from Shopify
+   * @param id Order ID in Shopify
+   */
+  async createOrderToChickeeDuckServer(id: string) {
+    try {
+      const order = await this.getOrder(id);
+      await this.shopifyWebhookService.updateChickeeDuckInventory(order.order);
+      return order;
     } catch (error) {
       throw error;
     }

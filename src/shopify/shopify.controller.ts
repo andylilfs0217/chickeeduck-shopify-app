@@ -109,16 +109,48 @@ export class ShopifyController {
     }
   }
 
-  // FOR TESTING
-
   /**
    * Get all orders on ChickeeDuck Shopify
    * @returns All Shopify orders
    */
   @Get('orders')
-  async getAllOrders() {
+  async getAllOrders(
+    @Query('created_at_min') createdAtMin: string,
+    @Query('created_at_max') createdAtMax: string,
+    @Query('fields') fields: string,
+    @Query('status') status: string,
+  ) {
     try {
-      return this.shopifyService.getAllOrders();
+      return this.shopifyService.getAllOrders(
+        createdAtMin,
+        createdAtMax,
+        fields,
+        status,
+      );
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * Get a specific order
+   * @param id Order ID in Shopify
+   * @param fields Desired fields of the order
+   * @returns Order details
+   */
+  @Get('orders/:id')
+  async getOrder(@Param('id') id: string, @Query('fields') fields: string) {
+    try {
+      return this.shopifyService.getOrder(id, fields);
+    } catch (error) {
+      return error.message;
+    }
+  }
+
+  @Post('orders/:id')
+  async createOrderToChickeeDuckServer(@Param('id') id: string) {
+    try {
+      return this.shopifyService.createOrderToChickeeDuckServer(id);
     } catch (error) {
       throw error;
     }
